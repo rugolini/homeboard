@@ -23,7 +23,7 @@ def parse(text):
             raise ConfigError(f"probe needs host and url: {probe}")
     return {
         "site": {"language": "pt-BR", "domain": None, **site},
-        "collector": {"interval_seconds": 60, "data_dir": "/data", "web_dir": "/app/web", "port": 8080, **raw.get("collector", {})},
+        "collector": {"interval_seconds": 60, "fast_interval_seconds": 10, "data_dir": "/data", "web_dir": "/app/web", "port": 8080, **raw.get("collector", {})},
         "sources": raw.get("sources", {}),
         "probe": raw.get("probe", []),
         "map": raw.get("map", {}),

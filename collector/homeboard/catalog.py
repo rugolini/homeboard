@@ -29,17 +29,26 @@ def load(text):
 GROUPS = ("personal", "iot")
 
 
-def devices(text, hostnames):
-    """Catalog devices with online state, from the hostnames the router leased."""
+def devices(text, hostnames, traffic=None):
+    """Catalog devices with online state and, when traffic {hostname: (down, up) Mbps} is given, their rates."""
     seen = [h for h in dict.fromkeys(hostnames) if h and h != "*"]
     result, matched = {g: [] for g in GROUPS}, set()
+    totals = {g: [0.0, 0.0] for g in GROUPS}
     for raw in tomllib.loads(text).get("device", []):
         if raw.get("group") not in GROUPS:
             raise CatalogError(f"{raw.get('name')}: unknown group {raw.get('group')!r}")
         hits = [h for h in seen if any(h.lower().startswith(m.lower()) for m in raw.get("match", []))]
         matched.update(hits)
-        result[raw["group"]].append({"name": raw["name"], "online": bool(hits), **({"icon": raw["icon"]} if "icon" in raw else {})})
+        rates = [traffic[h] for h in hits if traffic and traffic.get(h) and None not in traffic[h]]
+        down = round(sum(r[0] for r in rates), 2) if rates else None
+        up = round(sum(r[1] for r in rates), 2) if rates else None
+        if rates:
+            totals[raw["group"]][0] += down
+            totals[raw["group"]][1] += up
+        result[raw["group"]].append({"name": raw["name"], "online": bool(hits), "down_mbps": down, "up_mbps": up,
+                                     **({"icon": raw["icon"]} if "icon" in raw else {})})
     result["unknown"] = [h for h in seen if h not in matched]
+    result["traffic"] = {g: {"down_mbps": round(d, 2), "up_mbps": round(u, 2)} for g, (d, u) in totals.items()}
     return result
 
 

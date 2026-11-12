@@ -16,6 +16,11 @@ STATUS = {
     "wg_handshakes": [1794255090, 0, 0, 1794500000 - 60],
     "leases": ["laptop-ana", "*"],
     "assoc": {"ra0": 4, "rax0": 5, "apcli0": 0},
+    "clients": [
+        {"name": "laptop-ana", "ip": "192.168.1.20", "iface": "5G", "online": True, "total_rx": "1000000", "total_tx": "500000"},
+        {"name": "server", "ip": "192.168.1.10", "iface": "cable", "online": True, "total_rx": "0", "total_tx": "0"},
+        {"name": "old-phone", "ip": "192.168.1.30", "iface": "2.4G", "online": False, "total_rx": "5", "total_tx": "5"},
+    ],
 }
 
 
@@ -54,3 +59,25 @@ class RouterTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ClientsTest(unittest.TestCase):
+    def test_client_rates_come_from_counter_deltas(self):
+        after = copy.deepcopy(STATUS)
+        after["time"] += 10
+        after["clients"][0]["total_rx"] = str(1_000_000 + 12_500_000)
+        after["clients"][0]["total_tx"] = str(500_000 + 1_250_000)
+        laptop = router(after, UPLINKS, previous=STATUS)["clients"][0]
+        self.assertEqual(laptop, {"name": "laptop-ana", "ip": "192.168.1.20", "iface": "5G", "online": True,
+                                  "down_mbps": 10.0, "up_mbps": 1.0})
+
+    def test_first_sample_has_no_rate_and_offline_clients_are_dropped(self):
+        clients = router(STATUS, UPLINKS)["clients"]
+        self.assertEqual([c["name"] for c in clients], ["laptop-ana", "server"])
+        self.assertIsNone(clients[0]["down_mbps"])
+
+    def test_counter_reset_gives_no_rate(self):
+        after = copy.deepcopy(STATUS)
+        after["time"] += 10
+        after["clients"][0]["total_rx"] = "10"
+        self.assertIsNone(router(after, UPLINKS, previous=STATUS)["clients"][0]["down_mbps"])

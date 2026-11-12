@@ -25,7 +25,25 @@ def router(status, uplinks, previous=None):
         },
         "wifi_clients": sum(n for radio, n in status.get("assoc", {}).items() if not radio.startswith("apcli")),
         "leases": status.get("leases", []),
+        "clients": _clients(status, previous),
     }
+
+
+def _clients(status, previous):
+    before = {(c["name"], c["ip"]): c for c in (previous or {}).get("clients", [])}
+    seconds = status["time"] - previous["time"] if previous else 0
+    out = []
+    for c in status.get("clients", []):
+        if not c.get("online"):
+            continue
+        prev = before.get((c["name"], c["ip"]))
+        rx = int(c["total_rx"]) - int(prev["total_rx"]) if prev else -1
+        tx = int(c["total_tx"]) - int(prev["total_tx"]) if prev else -1
+        ok = seconds > 0 and rx >= 0 and tx >= 0
+        out.append({"name": c["name"], "ip": c["ip"], "iface": c.get("iface"), "online": True,
+                    "down_mbps": round(rx * 8 / seconds / 1e6, 2) if ok else None,
+                    "up_mbps": round(tx * 8 / seconds / 1e6, 2) if ok else None})
+    return out
 
 
 def _rate(status, previous, dev):

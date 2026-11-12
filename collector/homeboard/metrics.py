@@ -30,6 +30,8 @@ HELP = {
     "homeboard_agent_tool_calls_today": "Agent tool calls today",
     "homeboard_subscriptions_monthly_brl": "Known monthly subscription costs",
     "homeboard_devices_online": "Catalog devices seen on DHCP",
+    "homeboard_device_traffic_bits_per_second": "Traffic of a catalog device, from router counters",
+    "homeboard_group_traffic_bits_per_second": "Traffic of a device group (personal, iot)",
     "homeboard_month_total_brl": "Subscriptions plus AI usage this month, in BRL",
     "homeboard_usd_brl": "USD/BRL exchange rate used (PTAX)",
 }
@@ -99,9 +101,19 @@ def metrics(status):
     put("homeboard_subscriptions_monthly_brl", status.get("catalog", {}).get("costs", {}).get("total_brl"))
     put("homeboard_month_total_brl", (status.get("costs") or {}).get("total_brl"))
     put("homeboard_usd_brl", ((status.get("costs") or {}).get("fx") or {}).get("usd_brl"))
-    for group, devices in (status.get("devices") or {}).items():
-        if group != "unknown":
-            put("homeboard_devices_online", sum(1 for d in devices if d.get("online")), group=group)
+    devices = status.get("devices") or {}
+    for group, items in devices.items():
+        if group in ("unknown", "traffic"):
+            continue
+        put("homeboard_devices_online", sum(1 for d in items if d.get("online")), group=group)
+        for d in items:
+            for direction in ("down", "up"):
+                mbps = d.get(f"{direction}_mbps")
+                put("homeboard_device_traffic_bits_per_second", round(mbps * 1e6) if mbps is not None else None,
+                    device=d["name"], direction=direction)
+    for group, rates in (devices.get("traffic") or {}).items():
+        for direction in ("down", "up"):
+            put("homeboard_group_traffic_bits_per_second", round(rates[f"{direction}_mbps"] * 1e6), group=group, direction=direction)
 
     lines = []
     for name, rows in samples.items():

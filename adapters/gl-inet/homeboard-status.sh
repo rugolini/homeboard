@@ -29,10 +29,15 @@ for w in $(iwinfo 2>/dev/null | awk '/ESSID/{print $1}'); do
 done
 signal=$(ubus call modem.signal get_signals '{"time":1}' 2>/dev/null | jsonfilter -e '@.signals[0]' 2>/dev/null)
 uptime=$(ifstatus wan 2>/dev/null | jsonfilter -e '@.uptime' 2>/dev/null)
+# Per-client counters from the GL firmware; MACs and per-second history stay on the router.
+clients=$(ubus call gl-clients list 2>/dev/null | jsonfilter -e '@.clients[*]' 2>/dev/null |
+	sed -E 's/"mac": *"[^"]*", *//; s/, *"mac": *"[^"]*"//; s/"(last_rx|last_tx|ipv6)": *\[[^]]*\], *//g; s/, *"(last_rx|last_tx|ipv6)": *\[[^]]*\]//g' |
+	awk '{printf "%s%s", (n++?", ":""), $0}')
 
 cat <<EOF
 {"time": $(date +%s), "fiber_ok": $(json_bool reach "$FIBER_DEV"), "five_g_ok": $(json_bool reach "$MODEM_DEV"),
  "routes": [$routes], "wan_uptime": ${uptime:-null},
  "counters": {$(counters "$FIBER_DEV"), $(counters "$MODEM_DEV")},
- "modem": ${signal:-null}, "wg_handshakes": [$handshakes], "leases": [$leases], "assoc": {$assoc}}
+ "modem": ${signal:-null}, "wg_handshakes": [$handshakes], "leases": [$leases], "assoc": {$assoc},
+ "clients": [$clients]}
 EOF

@@ -66,13 +66,25 @@ function node([x, y], icon, label, sub, tipHtml, color) {
 
 function group(side, title, sub, icon, items, color) {
   return `<div class="group ${side}" style="--c:${color}"><div class="gtop"><img src="${F(icon)}" alt=""><div><b>${esc(title)}</b><small>${esc(sub)}</small></div></div>
-   <div class="gitems">${items.map(d => `<div class="gi${d.online ? "" : " off"}"><i class="status${d.online ? "" : " off"}"></i><img src="${F(d.icon || "Desktop computer")}" alt=""><b>${esc(d.name)}</b><small>${t(d.online ? "online" : "offline")}</small>${tip(d.name, [[t("online"), d.online ? "✓" : "—"]], { c: color })}</div>`).join("")}</div></div>`;
+   <div class="gitems">${items.map(d => `<div class="gi${d.online ? "" : " off"}"><i class="status${d.online ? "" : " off"}"></i><img src="${F(d.icon || "Desktop computer")}" alt=""><b>${esc(d.name)}</b>
+     <small>${!d.online ? t("offline") : both(d) >= 0.05 ? `↓ ${mbpsText(d.down_mbps)}` : t("online")}</small>
+     ${tip(d.name, [[t("online"), d.online ? "✓" : "—"], d.down_mbps != null && ["↓", mbpsText(d.down_mbps)], d.up_mbps != null && ["↑", mbpsText(d.up_mbps)]], { c: color })}</div>`).join("")}</div></div>`;
 }
 
-function curve([x1, y1], [x2, y2], cls, stroke) {
-  const my = (y1 + y2) / 2;
-  return `<path class="ln ${cls}" ${stroke ? `stroke="${stroke}"` : ""} d="M${x1} ${y1} C${x1} ${my} ${x2} ${my} ${x2} ${y2}"/>`;
+// Packets move faster with more traffic and stop when the link is idle.
+function speed(mbps) {
+  if (mbps == null) return "";
+  if (mbps < 0.02) return "animation-play-state:paused;opacity:.25";
+  return `animation-duration:${Math.max(0.25, 3 - Math.log10(1 + mbps) * 1.1).toFixed(2)}s`;
 }
+
+function curve([x1, y1], [x2, y2], cls, stroke, mbps) {
+  const my = (y1 + y2) / 2;
+  return `<path class="ln ${cls}" ${stroke ? `stroke="${stroke}"` : ""} style="${speed(mbps)}" d="M${x1} ${y1} C${x1} ${my} ${x2} ${my} ${x2} ${y2}"/>`;
+}
+
+const mbpsText = v => v == null ? "—" : v >= 10 ? `${v.toFixed(0)} Mbps` : v >= 0.1 ? `${v.toFixed(1)} Mbps` : `${Math.round(v * 1000)} kbps`;
+const both = r => r ? (r.down_mbps || 0) + (r.up_mbps || 0) : null;
 
 function renderMap(s) {
   const m = s.map || {}, cloud = m.cloud || [], domain = s.site.domain;
@@ -91,14 +103,22 @@ function renderMap(s) {
   const rtip = r ? tip(t("router"), [[t("active"), r.active || "—"], r.rate_mbps && [t("speed_now"), `${r.rate_mbps.down} ↓ / ${r.rate_mbps.up} ↑ Mbps`],
     [t("wifi_clients"), r.wifi_clients], [t("vpn_peers"), `${r.vpn.active}/${r.vpn.peers}`]], { c: "#7fdcff" }) : tip(t("router"), [[t("unavailable"), "—"]]);
   html += node(ROUTER, "Satellite antenna", t("router"), "", rtip, "#7fdcff");
-  links += curve(NET, [548, 348], "base") + curve(NET, [548, 348], "flow", "#7fdcff") + curve(NET, [652, 348], "standby");
-  links += curve([548, 348], ROUTER, "base") + curve([548, 348], ROUTER, "flow", "#7fdcff") + curve([652, 348], ROUTER, "standby");
-  links += curve(ROUTER, SERVER_TOP, "base") + curve(ROUTER, SERVER_TOP, "flow", "#5ee8b0");
+  const wan = r?.rate_mbps ? r.rate_mbps.down + r.rate_mbps.up : null;
+  const dev0 = s.devices || {}, gt = dev0.traffic || {};
+  links += curve(NET, [548, 348], "base") + curve(NET, [548, 348], "flow", "#7fdcff", wan) + curve(NET, [652, 348], "standby");
+  links += curve([548, 348], ROUTER, "base") + curve([548, 348], ROUTER, "flow", "#7fdcff", wan) + curve([652, 348], ROUTER, "standby");
+  links += curve(ROUTER, SERVER_TOP, "base") + curve(ROUTER, SERVER_TOP, "flow", "#5ee8b0", both(s.server_traffic));
   links += curve(ROUTER, [300, 600], "wifi") + curve(ROUTER, [900, 600], "wifi");
+  links += curve(ROUTER, [300, 600], "flow", "#86b6ff", both(gt.personal)) + curve(ROUTER, [900, 600], "flow", "#ff9ccf", both(gt.iot));
   if (r?.rate_mbps) html += `<div class="pill" style="${pct(505, 262)};--c:#7fdcff">${r.rate_mbps.down} Mbps${tip(t("speed_now"), [["↓", `${r.rate_mbps.down} Mbps`], ["↑", `${r.rate_mbps.up} Mbps`]], { c: "#7fdcff" })}</div>`;
   const dev = s.devices || { personal: [], iot: [] };
-  html += `<div class="pill" style="${pct(372, 548)};--c:#86b6ff">${t("personal")} · ${dev.personal.filter(d => d.online).length}${tip(t("personal"), [[t("online"), `${dev.personal.filter(d => d.online).length}/${dev.personal.length}`]], { c: "#86b6ff" })}</div>`;
-  html += `<div class="pill" style="${pct(828, 548)};--c:#ff9ccf">IoT · ${dev.iot.filter(d => d.online).length}${tip(t("iot"), [[t("online"), `${dev.iot.filter(d => d.online).length}/${dev.iot.length}`]], { c: "#ff9ccf" })}</div>`;
+  const gpill = (g, x, color, title) => {
+    const on = dev[g].filter(d => d.online).length, tr = gt[g];
+    return `<div class="pill" style="${pct(x, 548)};--c:${color}">${title} · ${tr && both(tr) >= 0.05 ? mbpsText(both(tr)) : on}${tip(title, [[t("online"), `${on}/${dev[g].length}`],
+      tr && ["↓", mbpsText(tr.down_mbps)], tr && ["↑", mbpsText(tr.up_mbps)]], { c: color })}</div>`;
+  };
+  html += gpill("personal", 372, "#86b6ff", t("personal")) + gpill("iot", 828, "#ff9ccf", "IoT");
+  if (s.server_traffic) html += `<div class="pill" style="${pct(600, 556)};--c:#5ee8b0">${mbpsText(both(s.server_traffic))}${tip(t("server"), [["↓", mbpsText(s.server_traffic.down_mbps)], ["↑", mbpsText(s.server_traffic.up_mbps)]], { c: "#5ee8b0" })}</div>`;
   html += group("left", t("personal"), t("personal_sub"), "Busts in silhouette", dev.personal, "#86b6ff");
   html += group("right", t("iot"), t("iot_sub"), "Light bulb", dev.iot, "#ff9ccf");
   const vit = srv ? `<span>CPU <b>${srv.cpu_pct ?? "—"}%</b></span><span>${srv.cpu_temp_c ?? "—"} <b>°C</b></span><span>RAM <b>${fmt.bytes(srv.memory.used_bytes)}</b></span>` : `<span>${t("unavailable")}</span>`;
@@ -211,4 +231,4 @@ async function refresh() {
 document.querySelectorAll("img[data-f]").forEach(i => i.src = F(i.dataset.f));
 const clock = () => { const d = new Date(); $("hh").textContent = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }); $("dd").textContent = d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "short" }); };
 clock(); setInterval(clock, 10000);
-refresh(); setInterval(refresh, 60000);
+refresh(); setInterval(refresh, 10000);

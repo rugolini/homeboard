@@ -17,7 +17,8 @@ STATUS = {
         "dns": {"ok": False, "error": "boom"},
     },
     "catalog": {"costs": {"total_brl": 698.64}},
-    "devices": {"personal": [{"name": "Laptop", "online": True}, {"name": "Phone", "online": False}], "iot": []},
+    "devices": {"personal": [{"name": "Laptop", "online": True, "down_mbps": 2.5, "up_mbps": 0.5}, {"name": "Phone", "online": False}], "iot": [],
+                "unknown": ["x"], "traffic": {"personal": {"down_mbps": 2.5, "up_mbps": 0.5}, "iot": {"down_mbps": 0, "up_mbps": 0}}},
 }
 
 
@@ -50,6 +51,10 @@ class MetricsTest(unittest.TestCase):
         self.assertIn('homeboard_ai_spend_month_usd_by_tier{tier="other"} 1.5', self.text)
         self.assertIn("homeboard_subscriptions_monthly_brl 698.64", self.text)
         self.assertIn('homeboard_devices_online{group="personal"} 1', self.text)
+
+    def test_device_and_group_traffic(self):
+        self.assertIn('homeboard_device_traffic_bits_per_second{device="Laptop",direction="down"} 2500000', self.text)
+        self.assertIn('homeboard_group_traffic_bits_per_second{group="personal",direction="up"} 500000', self.text)
 
     def test_each_metric_has_help_and_type_once(self):
         self.assertEqual(self.text.count("# TYPE homeboard_disk_temperature_celsius gauge"), 1)

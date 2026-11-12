@@ -14,6 +14,7 @@ import urllib.error
 import urllib.request
 
 from . import adguard as adguard_parser
+from . import agent as agent_parser
 from . import statuspage as statuspage_parser
 from . import costs as costs_parser
 from . import build, hermes as hermes_parser, litellm as litellm_parser, router as router_parser, unraid as unraid_parser
@@ -84,10 +85,27 @@ def litellm(cfg, now):
                          'where "startTime" >= :start group by 1, 2 order by 1', **month)
         keys = conn.run('select t.key_alias, sum(s.spend) from "LiteLLM_SpendLogs" s left join "LiteLLM_VerificationToken" t '
                         'on t.token = s.api_key where s."startTime" >= :start group by 1 order by 2 desc', **month)
+        agent = None
+        if cfg.get("agent_key"):
+            key = dict(key=cfg["agent_key"])
+            budget = conn.run('select max_budget, budget_duration, budget_reset_at, spend from "LiteLLM_VerificationToken" '
+                              'where key_alias = :key', **key)
+            today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            reqs = conn.run('select s."startTime", s.spend from "LiteLLM_SpendLogs" s join "LiteLLM_VerificationToken" t '
+                            'on t.token = s.api_key where t.key_alias = :key and s."startTime" >= :start',
+                            start=today - dt.timedelta(days=7), **key)
+            b = budget[0] if budget else None
+            agent = {
+                "budget": b and {"max_usd": float(b[0]) if b[0] is not None else None, "duration": b[1],
+                                 "reset_at": b[2].isoformat() if b[2] else None, "spend_usd": float(b[3] or 0)},
+                "requests": [(r[0].timestamp(), float(r[1] or 0)) for r in reqs],
+            }
     finally:
         conn.close()
-    return litellm_parser.spend([(d, g, float(u or 0)) for d, g, u in daily], [(k, float(u or 0)) for k, u in keys],
+    data = litellm_parser.spend([(d, g, float(u or 0)) for d, g, u in daily], [(k, float(u or 0)) for k, u in keys],
                                 cfg.get("tiers"))
+    data["agent"] = agent
+    return data
 
 
 def hermes(cfg, now):
@@ -100,6 +118,7 @@ def hermes(cfg, now):
         conn = sqlite3.connect(pathlib.Path(tmp) / src.name)
         try:
             data = hermes_parser.summary(conn, now)
+            data["activity"] = agent_parser.activity(conn, now)
         finally:
             conn.close()
     if cfg.get("tiers_file") and pathlib.Path(cfg["tiers_file"]).exists():

@@ -177,20 +177,44 @@ function renderStorage(s) {
      ${disks.map(d => `<div class="r"><span>${esc(d.name)} · ${d.rotational ? (d.spinning ? t("spinning") : t("stopped")) : "SSD"}</span><b class="mono">${used(d)}</b></div>`).join("")}</div></div>`;
 }
 
+const SOURCE_ICON = { whatsapp: "Speech balloon", cron: "Hourglass not done", cli: "Desktop computer", tui: "Desktop computer", api_server: "Link", subagent: "Robot" };
+const ago = m => m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)} h` : `${Math.round(m / 1440)} d`;
+const hhmm = ts => new Date(ts * 1000).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+const brlFromUsd = (s, usd) => s.costs?.fx && usd != null ? fmt.brl(usd * s.costs.fx.usd_brl) : fmt.usd(usd);
+
 function renderAgent(s) {
   if (!section("agent", s, "agent")) return;
-  const a = block(s, "agent");
-  if (!a) { $("agent").innerHTML = unavailable("Robot", t("agent")); return; }
-  const steps = a.last_session?.steps || [];
+  const a = block(s, "agent"), act = s.agent_activity, name = s.agent_name || "Hermes";
+  document.querySelector('[data-t="agent"]').textContent = name;
+  if (!a || !act) { $("agent").innerHTML = unavailable("Robot", name); return; }
+  const n = act.now, b = s.agent_budget, h = act.health;
+  const sentence = !n ? t("agent_never") : n.active
+    ? `<b>${esc(name)}</b> ${t("agent_working")} <b>«${esc(n.title || t("untitled"))}»</b> · ${t("via")} ${esc(n.source)} · ${t("for")} ${ago(n.minutes)} · ${n.steps} ${t("steps")}`
+    : `<b>${esc(name)}</b> ${t("agent_free")} · ${t("last_task")} ${ago(n.idle_minutes)}: «${esc(n.title || t("untitled"))}»`;
+  const todayCost = act.diary.filter(d => new Date(d.first * 1000).toDateString() === new Date().toDateString()).reduce((x, d) => x + (d.cost_usd || 0), 0);
+  const pctBudget = b?.max_usd ? Math.min(100, 100 * b.spend_usd / b.max_usd) : null;
   $("agent").innerHTML = `
-   <div class="card"><div class="hd"><img src="${F("Thought balloon")}" alt=""><h2>${t("thinking")}</h2><span class="mono">${esc(a.last_session?.title || "")}</span></div>
-     <div class="think">${steps.map(st => `<div class="step" style="opacity:1"><span class="k">${t("kind_" + st.kind)}</span><span class="${st.kind === "tool" ? "tool" : st.kind === "thought" ? "thought" : ""}">${st.tool ? `${esc(st.tool)} · ` : ""}${esc(st.text)}</span></div>`).join("")}</div></div>
-   <div class="card"><div class="hd"><img src="${F("Toolbox")}" alt=""><h2>${t("today")}</h2></div><div class="body">
-     <div class="line"><span>${t("sessions")}</span><b>${a.sessions_today}</b></div><div class="line"><span>${t("tool_calls")}</span><b>${a.tool_calls_today}</b></div>
-     ${(() => { const k = block(s, "ai_spend")?.by_key?.find(([n]) => n === s.agent_key); return k ? `<div class="line"><span>${t("agent_month")}</span><b class="mono">${fmt.usd(k[1])}</b></div>` : ""; })()}
-     ${(a.top_tools || []).map(([n, c]) => `<div class="line"><span class="mono">${esc(n)}</span><b>${c}</b></div>`).join("")}</div></div>
-   <div class="card"><div class="hd"><img src="${F("Crystal ball")}" alt=""><h2>${t("tiers")}</h2></div><div class="body">
-     ${Object.entries(a.tiers || {}).map(([tier, model]) => `<div class="line"><span>${esc(tier)}</span><b class="mono">${esc(model)}</b></div>`).join("") || "—"}</div></div>`;
+   <div class="card agent-now ${n?.active ? "busy" : ""}" style="grid-column:span 3"><div class="body now-line">
+     <img src="${F(n?.active ? "Robot" : "Zzz")}" onerror="this.src='${F("Robot")}'" alt=""><div>${sentence}</div></div></div>
+   <div class="card" style="grid-column:span 2"><div class="hd"><img src="${F("Spiral calendar")}" onerror="this.src='${F("Memo")}'" alt=""><h2>${t("diary")}</h2><span>${t("last_7_days")}</span></div>
+     <div class="dlist diary">${act.diary.map(d => `<div class="r">
+       <span class="dtitle"><img src="${F(SOURCE_ICON[d.source] || "Gear")}" alt="">${esc(d.title || t("untitled"))}</span>
+       <span class="mono dmeta">${hhmm(d.first)} · ${ago(d.minutes)} · ${d.tool_calls} ${t("tools_short")}${d.errors ? ` · <em class="bad">${d.errors} ${t("errors_short")}</em>` : ""}</span>
+       <b class="mono">${d.cost_usd ? brlFromUsd(s, d.cost_usd) : "—"}</b></div>`).join("") || `<div class="r"><span>—</span></div>`}</div></div>
+   <div class="card"><div class="hd"><img src="${F("Coin")}" alt=""><h2>${t("cost_eff")}</h2></div><div class="body">
+     ${b ? `<div class="line"><span>${t("budget")} (${esc(b.duration || "")})</span><b class="mono">${brlFromUsd(s, b.spend_usd)} / ${brlFromUsd(s, b.max_usd)}</b></div>
+       <div class="prog"><i style="--w:${pctBudget ?? 0}%;width:${pctBudget ?? 0}%;background:linear-gradient(90deg,#5ee8b0,${pctBudget > 80 ? "#ff8a8a" : "#ffd36b"})"></i></div>
+       ${b.reset_at ? `<div class="line"><span>${t("resets")}</span><b>${new Date(b.reset_at).toLocaleDateString()}</b></div>` : ""}` : ""}
+     <div class="line"><span>${t("cost_today")}</span><b class="mono">${brlFromUsd(s, todayCost)}</b></div>
+     <div class="line"><span>${t("cache_pct")}</span><b class="mono">${h.cache_pct != null ? h.cache_pct + "%" : "—"}</b></div>
+     ${Object.entries(a.tiers || {}).map(([tier, model]) => `<div class="line"><span>${esc(tier)}</span><b class="mono small">${esc(model)}</b></div>`).join("")}</div></div>
+   <div class="card"><div class="hd"><img src="${F("Stethoscope")}" onerror="this.src='${F("Herb")}'" alt=""><h2>${t("agent_health")}</h2></div><div class="body">
+     <div class="line"><span>${t("tool_calls")}</span><b>${h.tool_calls_today}</b></div>
+     <div class="line"><span>${t("errors")}</span><b style="color:${h.tool_errors_today ? "var(--warn)" : "var(--ok)"}">${h.tool_errors_today}${h.tool_calls_today ? ` (${Math.round(100 * h.tool_errors_today / h.tool_calls_today)}%)` : ""}</b></div>
+     ${h.errors_by_tool.map(([tool, c]) => `<div class="line"><span class="mono">${esc(tool)}</span><b>${c}</b></div>`).join("")}</div></div>
+   <div class="card" style="grid-column:span 2"><div class="hd"><img src="${F("Hammer and wrench")}" alt=""><h2>${t("changes")}</h2><span>${t("last_7_days")}</span></div>
+     <div class="dlist">${act.changes.map(c => `<div class="r"><span class="mono small">${c.kind === "file" ? "✎" : "›"} ${esc(c.text)}</span><b class="mono small">${hhmm(c.time)}</b></div>`).join("") || `<div class="r"><span>${t("no_changes")}</span></div>`}</div>
+     <div class="body"><p class="hint">${t("changes_hint")}</p></div></div>`;
 }
 
 function renderCosts(s) {

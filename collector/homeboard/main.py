@@ -11,6 +11,7 @@ import time
 from . import catalog, config, sources
 from .metrics import metrics
 from .costs import breakdown
+from .agent import attribute_costs
 from .build import apps, build
 from .history import History
 
@@ -64,6 +65,19 @@ def collect(cfg, state, history, slow=True):
     status["site"] = cfg["site"]
     status["map"] = cfg["map"]
     status["agent_key"] = src.get("hermes", {}).get("litellm_key")
+    status["agent_name"] = src.get("hermes", {}).get("display_name", "Hermes")
+    spend_block = blocks.get("ai_spend", {})
+    agent_block = blocks.get("agent", {})
+    if spend_block.get("ok") and (spend_block["data"].get("agent") or {}).get("requests") is not None:
+        agent_spend = spend_block["data"]["agent"]
+        if agent_block.get("ok") and agent_block["data"].get("activity"):
+            act = agent_block["data"]["activity"]
+            status["agent_activity"] = {**act, "diary": attribute_costs(act["diary"], agent_spend["requests"])}
+        status["agent_budget"] = agent_spend.get("budget")
+        # The raw request list is only for attribution; keep status.json small.
+        status["blocks"] = {**blocks, "ai_spend": {**spend_block, "data": {k: v for k, v in spend_block["data"].items() if k != "agent"}}}
+    elif agent_block.get("ok"):
+        status["agent_activity"] = agent_block["data"].get("activity")
     status["catalog"] = catalog.load(text)
     status["costs"] = breakdown(status["catalog"], blocks.get("ai_spend", {}).get("data"), blocks.get("fx", {}).get("data"))
     status["apps"] = apps(text, containers, probes)

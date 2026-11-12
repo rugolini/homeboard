@@ -127,7 +127,7 @@ function renderMap(s) {
   html += group("right", t("iot"), t("iot_sub"), "Light bulb", dev.iot, "#ff9ccf");
   const vit = srv ? `<span>CPU <b>${srv.cpu_pct ?? "—"}%</b></span><span>${srv.cpu_temp_c ?? "—"} <b>°C</b></span><span>RAM <b>${fmt.bytes(srv.memory.used_bytes)}</b></span>` : `<span>${t("unavailable")}</span>`;
   const bk = block(s, "backup");
-  html += `<div class="server"><div class="top"><img src="${F("Card file box")}" alt=""><div><b>${t("server")}</b><small>${(s.apps || []).length} apps</small></div>
+  html += `<div class="server"><div class="top"><span class="srv-open" data-server title="${t("details")}"><img src="${F("Card file box")}" alt=""><div><b>${t("server")}</b><small>${(s.apps || []).length} apps · ${t("details")} ›</small></div></span>
     <div class="vit">${vit}${bk ? `<span>${t("backup")} <b>${bk.ok && !bk.stale ? "ok" : t("attention")}</b></span>` : ""}</div></div>
     <div class="apps">${(s.apps || []).map(a => `<a class="app${a.state === "paused" ? " paused" : ""}" data-app="${esc(a.label)}" href="#">
       <i class="status${a.state === "up" ? "" : a.state === "paused" ? " off" : " warn"}"></i><img src="${F(a.icon || "Gear")}" alt=""><b>${esc(a.label)}</b>
@@ -162,24 +162,25 @@ function section(id, s, name) {
 
 const unavailable = (icon, title) => `<div class="card"><div class="hd"><img src="${F(icon)}" alt=""><h2>${esc(title)}</h2></div><div class="unavail">${t("unavailable")}</div></div>`;
 
-function renderStorage(s) {
-  if (!section("storage", s, "server")) return;
-  const srv = block(s, "server"), bk = block(s, "backup");
-  if (!srv) { $("storage").innerHTML = unavailable("Herb", t("health")); return; }
+function serverModal(s) {
+  const srv = block(s, "server"), bk = block(s, "backup"), cont = block(s, "containers") || [];
+  const unraid = (s.apps || []).find(a => a.host === (s.map?.server_console_host || "unraid"));
+  const url = unraid ? consoleUrl(s, unraid) : null;
+  if (!srv) return `<div class="mhead"><img src="${F("Card file box")}" alt=""><div><h3>${t("server")}</h3></div><span class="badge-state down">${t("unavailable")}</span></div>`;
   const disks = srv.disks, healthy = disks.every(d => d.healthy) && srv.array.disabled === 0;
-  const temps = disks.map(d => `<div class="t"><b>${d.temp_c ?? "—"}°</b><span>${esc(d.name)}</span></div>`).join("") + `<div class="t"><b>${srv.cpu_temp_c ?? "—"}°</b><span>CPU</span></div>`;
-  const used = d => d.size_bytes ? `${fmt.bytes(d.used_bytes)} / ${fmt.bytes(d.size_bytes)}` : "—";
-  $("storage").innerHTML = `
-   <div class="card"><div class="hd"><img src="${F("Herb")}" alt=""><h2>${t("health")}</h2></div><div class="body">
-     <div class="big" style="color:${healthy ? "var(--ok)" : "var(--warn)"}">${t(healthy ? "healthy" : "attention")}</div>
-     <div class="line"><span>${t("disks")}</span><b>${disks.filter(d => d.healthy).length} / ${disks.length}</b></div>
-     <div class="line"><span>${t("parity")}</span><b>${srv.array.parity_errors === 0 ? t("valid") : `${srv.array.parity_errors} ${t("errors")}`}</b></div></div></div>
-   <div class="card"><div class="hd"><img src="${F("Thermometer")}" alt=""><h2>${t("temperature")}</h2><span>°C</span></div><div class="body"><div class="temps">${temps}</div></div></div>
-   ${bk ? `<div class="card"><div class="hd"><img src="${F("Floppy disk")}" alt=""><h2>${t("backup")}</h2></div><div class="body">
-     <div class="line"><span>${t("last_copy")}</span><b style="color:${bk.ok && !bk.stale ? "var(--text)" : "var(--warn)"}">${bk.age_hours} ${t("hours_ago")}${bk.seconds ? ` · ${Math.round(bk.seconds / 60)} ${t("minutes")}` : ""}</b></div>
-     ${bk.error ? `<div class="line"><span>erro</span><b style="color:var(--bad)">${esc(bk.error)}</b></div>` : ""}</div></div>` : unavailable("Floppy disk", t("backup"))}
-   <div class="card"><div class="hd"><img src="${F("Package")}" alt=""><h2>${t("space")}</h2></div><div class="dlist">
-     ${disks.map(d => `<div class="r"><span>${esc(d.name)} · ${d.rotational ? (d.spinning ? t("spinning") : t("stopped")) : "SSD"}</span><b class="mono">${used(d)}</b></div>`).join("")}</div></div>`;
+  const running = cont.filter(c => c.State === "running").length;
+  const space = d => d.size_bytes ? `<div class="prog"><i style="width:${(100 * d.used_bytes / d.size_bytes).toFixed(1)}%;background:linear-gradient(90deg,#7fdcff,#a99bff)"></i></div>` : "";
+  return `<div class="mhead"><img src="${F("Card file box")}" alt=""><div><h3>${t("server")}</h3><small>${t("storage_sub")}</small></div>
+      <span class="badge-state ${healthy ? "up" : "down"}">${t(healthy ? "healthy" : "attention")}</span>${url ? `<a class="btn" href="${url}" target="_blank" rel="noopener">${t("open_console")} ↗</a>` : ""}</div>
+    <div class="facts">${fact("CPU", srv.cpu_pct != null ? `${srv.cpu_pct}%` : "—")}${fact(t("temperature") + " CPU", srv.cpu_temp_c != null ? `${srv.cpu_temp_c} °C` : "—")}
+      ${fact(t("memory"), `${fmt.bytes(srv.memory.used_bytes)} / ${fmt.bytes(srv.memory.total_bytes)}`)}${fact(t("uptime"), srv.uptime_s ? ago(Math.round(srv.uptime_s / 60)) : "—")}
+      ${fact(t("containers"), `${running} / ${cont.length}`)}${fact(t("parity"), srv.array.parity_errors === 0 ? t("valid") : `${srv.array.parity_errors} ${t("errors")}`)}
+      ${fact(t("parity_check"), srv.array.last_check ? new Date(srv.array.last_check * 1000).toLocaleDateString() : "—")}${fact(t("disks"), `${disks.filter(d => d.healthy).length} / ${disks.length}`)}</div>
+    <div class="msec"><h4>${t("disks")}</h4><div class="dlist disks">${disks.map(d => `<div class="r">
+      <span><b>${esc(d.name)}</b> <em class="mono">${d.rotational ? (d.spinning ? t("spinning") : t("stopped")) : "SSD"} · ${d.temp_c != null ? d.temp_c + " °C" : "—"}${d.healthy ? "" : ` · <em class="bad">${t("attention")}</em>`}</em></span>
+      <span class="dspace">${space(d)}<b class="mono">${d.size_bytes ? `${fmt.bytes(d.used_bytes)} / ${fmt.bytes(d.size_bytes)}` : "—"}</b></span></div>`).join("")}</div></div>
+    ${bk ? `<div class="msec"><h4>${t("backup")}</h4><div class="facts">${fact(t("last_copy"), `${bk.age_hours} ${t("hours_ago")}`)}${fact(t("duration"), bk.seconds ? `${Math.round(bk.seconds / 60)} ${t("minutes")}` : "—")}
+      ${fact(t("status"), bk.ok && !bk.stale ? "ok" : `<span style="color:var(--warn)">${t(bk.stale ? "stale" : "attention")}</span>`)}${fact("erro", bk.error ? esc(bk.error) : null)}</div></div>` : ""}`;
 }
 
 const SOURCE_ICON = { whatsapp: "Speech balloon", cron: "Hourglass not done", cli: "Desktop computer", tui: "Desktop computer", api_server: "Link", subagent: "Robot" };
@@ -251,11 +252,13 @@ function drawModal() {
   if (!MODAL || !LAST) return;
   const s = LAST;
   if (MODAL.kind === "app") { const app = (s.apps || []).find(a => a.label === MODAL.key); if (app) $("mbody").innerHTML = appModal(s, app); }
+  if (MODAL.kind === "server") $("mbody").innerHTML = serverModal(s);
   if (MODAL.kind === "svc") { const svc = Object.values(s.catalog.categories).flat().find(x => x.name === MODAL.key); if (svc) $("mbody").innerHTML = svcModal(s, svc); }
 }
 document.addEventListener("click", e => {
-  const app = e.target.closest(".app[data-app]"), svc = e.target.closest(".si[data-svc]"), caio = e.target.closest(".caio");
-  if (app) { e.preventDefault(); openModal("app", app.dataset.app); }
+  const srvOpen = e.target.closest("[data-server]"), app = e.target.closest(".app[data-app]"), svc = e.target.closest(".si[data-svc]"), caio = e.target.closest(".caio");
+  if (srvOpen) openModal("server");
+  else if (app) { e.preventDefault(); openModal("app", app.dataset.app); }
   else if (svc) openModal("svc", svc.dataset.svc);
   else if (caio && LAST) { const h = (LAST.apps || []).find(a => a.container === (LAST.map?.agent_container || "hermes")); if (h) openModal("app", h.label); }
   else if (e.target.id === "modal" || e.target.classList.contains("mclose")) closeModal();
@@ -302,7 +305,7 @@ async function refresh() {
     document.querySelectorAll("[data-t]").forEach(e => e.textContent = t(e.dataset.t));
     $("updated").textContent = new Date(s.generated_at).toLocaleTimeString(s.site.language);
     LAST = s;
-    renderStrip(s); renderMap(s); renderStorage(s); renderCosts(s); drawModal();
+    renderStrip(s); renderMap(s); renderCosts(s); drawModal();
   } catch (e) {
     console.error(e);
   }

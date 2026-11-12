@@ -113,5 +113,11 @@
   "task_browsing": "browsing",
   "task_editing": "editing files",
   "task_server": "working on the server",
-  "task_working": "working"
+  "task_working": "working",
+  "details": "details",
+  "uptime": "up for",
+  "containers": "containers",
+  "parity_check": "last parity check",
+  "duration": "duration",
+  "status": "status"
 }

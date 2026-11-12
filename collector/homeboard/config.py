@@ -27,5 +27,6 @@ def parse(text):
         "sources": raw.get("sources", {}),
         "probe": raw.get("probe", []),
         "map": raw.get("map", {}),
+        "statuspage": raw.get("statuspage", []),
         "raw_text": text,
     }

@@ -68,5 +68,8 @@
   "cat_home": "Home",
   "cat_access": "Remote access",
   "updated": "updated",
-  "minutes": "min"
+  "minutes": "min",
+  "status_page": "status page",
+  "degraded": "degraded",
+  "agent_month": "month spend (gateway)"
 }

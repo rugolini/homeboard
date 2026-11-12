@@ -54,6 +54,20 @@ class HermesTest(unittest.TestCase):
         self.assertIn("[secret]", steps[2]["text"])
         self.assertLessEqual(len(steps[4]["text"]), 161)
 
+    def test_json_tool_output_becomes_a_short_summary(self):
+        conn = db()
+        conn.execute("insert into messages (session_id, role, content, tool_name, timestamp) values (?,?,?,?,?)",
+                     ("s1", "tool", '{"status": "success", "output": "3 files written\\nmore detail", "duration": 1.2}',
+                      "execute_code", TODAY + 6))
+        last = summary(conn, NOW)["last_session"]["steps"][-1]
+        self.assertEqual(last["text"], "success · 3 files written")
+
+    def test_json_tool_error_is_shown_first(self):
+        conn = db()
+        conn.execute("insert into messages (session_id, role, content, tool_name, timestamp) values (?,?,?,?,?)",
+                     ("s1", "tool", '{"output": "", "error": "permission denied"}', "terminal", TODAY + 6))
+        self.assertEqual(summary(conn, NOW)["last_session"]["steps"][-1]["text"], "error: permission denied")
+
     def test_last_session_title_and_running_state(self):
         last = summary(db(), NOW)["last_session"]
         self.assertEqual((last["title"], last["running"]), ("Media server slow?", True))

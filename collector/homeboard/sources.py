@@ -14,6 +14,7 @@ import urllib.error
 import urllib.request
 
 from . import adguard as adguard_parser
+from . import statuspage as statuspage_parser
 from . import build, hermes as hermes_parser, litellm as litellm_parser, router as router_parser, unraid as unraid_parser
 
 
@@ -110,6 +111,16 @@ def adguard(cfg):
     password = os.environ.get(cfg.get("password_env", "ADGUARD_PASSWORD"), "")
     headers = {"Authorization": "Basic " + base64.b64encode(f"{user}:{password}".encode()).decode()} if user else {}
     return adguard_parser.adguard(_get_json(f"{cfg['url']}/control/stats", headers))
+
+
+def statuspages(pages):
+    out = {}
+    for page in pages:
+        try:
+            out[page["name"]] = statuspage_parser.statuspage(_get_json(page["url"], timeout=8))
+        except (OSError, ValueError) as exc:
+            out[page["name"]] = {"up": None, "degraded": False, "description": f"{type(exc).__name__}"}
+    return out
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):

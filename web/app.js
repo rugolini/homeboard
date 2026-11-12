@@ -28,6 +28,10 @@ function serviceState(s, svc) {
     const r = block(s, "router");
     if (r) return { up: r.uplinks[key], active: r.active === key, hist: s.history?.[svc.status] };
   }
+  if (kind === "page") {
+    const p = block(s, "status_pages")?.[key];
+    if (p) return { up: p.up !== false, active: svc.role !== "standby", degraded: p.degraded, desc: p.description, hist: s.history?.[svc.status] };
+  }
   if (kind === "app") {
     const p = block(s, "probes")?.[key];
     if (p) return { up: p.ok, active: svc.role !== "standby", ms: p.ms, hist: s.history?.[svc.status] };
@@ -49,8 +53,8 @@ function card(s, category, [x, y], color, wide) {
      ] : [];
      const tr = [[off ? t("standby") : t("active"), st.up === false ? t("down") : t("up")],
        st.hist && [t("uptime30"), fmt.pct(st.hist.uptime_pct)], st.hist && [t("downtime"), `${st.hist.downtime_min} ${t("minutes")}`],
-       st.ms != null && [t("latency"), `${st.ms} ms`], ...extra, svc.monthly_brl != null && [t("costs"), fmt.brl(svc.monthly_brl)], svc.note && ["", svc.note]];
-     return `<div class="si${off ? " off" : ""}"><img src="${F(svc.icon || "Sparkles")}" alt=""><b>${esc(svc.name)}</b><small>${esc(st.up === false ? t("down") : off ? t("standby") : t("active"))}</small>
+       st.ms != null && [t("latency"), `${st.ms} ms`], st.desc && [t("status_page"), st.desc], ...extra, svc.monthly_brl != null && [t("costs"), fmt.brl(svc.monthly_brl)], svc.note && ["", svc.note]];
+     return `<div class="si${off ? " off" : ""}"><img src="${F(svc.icon || "Sparkles")}" alt=""><b>${esc(svc.name)}</b><small>${esc(st.up === false ? t("down") : st.degraded ? t("degraded") : off ? t("standby") : t("active"))}</small>
        ${tip(svc.name, tr, { c: off ? "var(--line2)" : color, below, daily: st.hist?.daily })}</div>`;
    }).join("")}</div></div>`;
 }
@@ -163,7 +167,7 @@ function renderAgent(s) {
      <div class="think">${steps.map(st => `<div class="step" style="opacity:1"><span class="k">${t("kind_" + st.kind)}</span><span class="${st.kind === "tool" ? "tool" : st.kind === "thought" ? "thought" : ""}">${st.tool ? `${esc(st.tool)} · ` : ""}${esc(st.text)}</span></div>`).join("")}</div></div>
    <div class="card"><div class="hd"><img src="${F("Toolbox")}" alt=""><h2>${t("today")}</h2></div><div class="body">
      <div class="line"><span>${t("sessions")}</span><b>${a.sessions_today}</b></div><div class="line"><span>${t("tool_calls")}</span><b>${a.tool_calls_today}</b></div>
-     <div class="line"><span>${t("costs")}</span><b class="mono">${fmt.usd(a.cost_today_usd)}</b></div>
+     ${(() => { const k = block(s, "ai_spend")?.by_key?.find(([n]) => n === s.agent_key); return k ? `<div class="line"><span>${t("agent_month")}</span><b class="mono">${fmt.usd(k[1])}</b></div>` : ""; })()}
      ${(a.top_tools || []).map(([n, c]) => `<div class="line"><span class="mono">${esc(n)}</span><b>${c}</b></div>`).join("")}</div></div>
    <div class="card"><div class="hd"><img src="${F("Crystal ball")}" alt=""><h2>${t("tiers")}</h2></div><div class="body">
      ${Object.entries(a.tiers || {}).map(([tier, model]) => `<div class="line"><span>${esc(tier)}</span><b class="mono">${esc(model)}</b></div>`).join("") || "—"}</div></div>`;

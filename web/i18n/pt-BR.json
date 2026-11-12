@@ -68,5 +68,8 @@
   "cat_home": "Casa",
   "cat_access": "Acesso de fora",
   "updated": "atualizado",
-  "minutes": "min"
+  "minutes": "min",
+  "status_page": "página de status",
+  "degraded": "instável",
+  "agent_month": "gasto no mês (gateway)"
 }

@@ -30,6 +30,8 @@ def collect(cfg, state, history):
         fetchers["agent"] = lambda: sources.hermes(src["hermes"], now)
     if "adguard" in src:
         fetchers["dns"] = lambda: sources.adguard(src["adguard"])
+    if cfg["statuspage"]:
+        fetchers["status_pages"] = lambda: sources.statuspages(cfg["statuspage"])
     fetchers["probes"] = lambda: {p["host"]: sources.probe(p["url"], p.get("insecure", False)) for p in cfg["probe"]}
 
     status = build(fetchers, now)
@@ -37,6 +39,9 @@ def collect(cfg, state, history):
     probes = blocks["probes"].get("data", {})
     for host, result in probes.items():
         history.record(f"app:{host}", result["ok"], now)
+    for name, page in blocks.get("status_pages", {}).get("data", {}).items():
+        if page["up"] is not None:
+            history.record(f"page:{name}", page["up"], now)
     router = blocks.get("router", {})
     if router.get("ok"):
         for name, up in router["data"]["uplinks"].items():
@@ -46,6 +51,7 @@ def collect(cfg, state, history):
     containers = blocks.get("containers", {}).get("data", [])
     status["site"] = cfg["site"]
     status["map"] = cfg["map"]
+    status["agent_key"] = src.get("hermes", {}).get("litellm_key")
     status["catalog"] = catalog.load(text)
     status["apps"] = apps(text, containers, probes)
     leases = router["data"]["leases"] if router.get("ok") else []

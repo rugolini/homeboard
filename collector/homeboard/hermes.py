@@ -1,4 +1,5 @@
 """Summary of what Hermes did today, read from a copy of its state.db."""
+import json
 import re
 
 MAX_TEXT = 160
@@ -11,6 +12,29 @@ _KIND = {"user": "request", "assistant": "thought", "tool": "tool"}
 def _clean(text):
     text = _SECRET.sub("[secret]", " ".join((text or "").split()))
     return text if len(text) <= MAX_TEXT else text[:MAX_TEXT - 1] + "…"
+
+
+_SUMMARY_KEYS = ("status", "output", "content", "result", "message", "path")
+
+
+def _tool_text(content):
+    """Tools answer in JSON; show the error or status and the first line of output instead of the raw object."""
+    try:
+        data = json.loads(content or "")
+    except ValueError:
+        return content
+    if not isinstance(data, dict):
+        return content
+    if data.get("error"):
+        return f"error: {data['error']}"
+    parts = []
+    for key in _SUMMARY_KEYS:
+        value = data.get(key)
+        if isinstance(value, str) and value.strip():
+            parts.append(value.strip().splitlines()[0])
+        if len(parts) == 2:
+            break
+    return " · ".join(parts) or content
 
 
 def summary(conn, now):
@@ -43,7 +67,7 @@ def _last_session(conn):
     for role, content, tool in reversed(msgs):
         if role == "assistant" and not (content or "").strip():
             continue
-        step = {"kind": _KIND[role], "text": _clean(content)}
+        step = {"kind": _KIND[role], "text": _clean(_tool_text(content) if role == "tool" else content)}
         if tool:
             step["tool"] = tool
         steps.append(step)

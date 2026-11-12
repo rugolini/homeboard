@@ -9,6 +9,7 @@ import threading
 import time
 
 from . import catalog, config, sources
+from .metrics import metrics
 from .build import apps, build
 from .history import History
 
@@ -70,6 +71,20 @@ def _write_json(path, data):
 
 def serve(web_dir, data_dir, port):
     class Handler(http.server.SimpleHTTPRequestHandler):
+        def do_GET(self):
+            if self.path.split("?")[0] != "/metrics":
+                return super().do_GET()
+            try:
+                body = metrics(json.loads((pathlib.Path(data_dir) / "status.json").read_text())).encode()
+            except (OSError, ValueError):
+                self.send_error(503, "no status yet")
+                return
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; version=0.0.4")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
         def translate_path(self, path):
             if path.split("?")[0] == "/status.json":
                 return str(pathlib.Path(data_dir) / "status.json")

@@ -12,6 +12,7 @@ server, which services you pay for, and what your automation agent is doing — 
   with secrets redacted.
 
 The UI is static HTML that reads `status.json`; a small Python collector writes that file. No database, no build step.
+The same server exposes `/metrics` in Prometheus format, so Prometheus can keep long history and Grafana can chart it.
 
 ## Quick start (demo data)
 

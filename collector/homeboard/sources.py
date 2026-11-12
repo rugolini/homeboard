@@ -152,6 +152,25 @@ def fx(state, now):
     return rate or (cached or {}).get("rate")
 
 
+RIPESTAT = "https://stat.ripe.net/data/announced-prefixes/data.json?resource=AS{asn}"
+
+
+def prefixes(services, state, now):
+    """IP prefixes per service from its ASNs (RIPEstat, refreshed daily) plus any static ip_ranges."""
+    cached = state.get("prefixes")
+    if cached and cached["fetched"] == now.date().isoformat():
+        return cached["data"]
+    data = {}
+    for svc in services:
+        nets = list(svc.get("ip_ranges", []))
+        for asn in svc.get("asn", []):
+            nets += [p["prefix"] for p in _get_json(RIPESTAT.format(asn=asn), timeout=30)["data"]["prefixes"]]
+        if nets:
+            data[svc["name"]] = nets
+    state["prefixes"] = {"fetched": now.date().isoformat(), "data": data}
+    return data
+
+
 def statuspages(pages):
     out = {}
     for page in pages:

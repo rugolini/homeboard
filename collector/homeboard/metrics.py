@@ -32,6 +32,7 @@ HELP = {
     "homeboard_devices_online": "Catalog devices seen on DHCP",
     "homeboard_device_traffic_bits_per_second": "Traffic of a catalog device, from router counters",
     "homeboard_group_traffic_bits_per_second": "Traffic of a device group (personal, iot)",
+    "homeboard_service_traffic_bits_per_second": "Traffic to a catalog service, matched by its IP prefixes",
     "homeboard_month_total_brl": "Subscriptions plus AI usage this month, in BRL",
     "homeboard_usd_brl": "USD/BRL exchange rate used (PTAX)",
 }
@@ -99,6 +100,10 @@ def metrics(status):
         put("homeboard_agent_sessions_today", agent.get("sessions_today"))
         put("homeboard_agent_tool_calls_today", agent.get("tool_calls_today"))
     put("homeboard_subscriptions_monthly_brl", status.get("catalog", {}).get("costs", {}).get("total_brl"))
+    for svc, rates in (status.get("service_traffic") or {}).items():
+        for direction in ("down", "up"):
+            put("homeboard_service_traffic_bits_per_second", round(rates[f"{direction}_mbps"] * 1e6),
+                service="other" if svc == "_other" else svc, direction=direction)
     put("homeboard_month_total_brl", (status.get("costs") or {}).get("total_brl"))
     put("homeboard_usd_brl", ((status.get("costs") or {}).get("fx") or {}).get("usd_brl"))
     devices = status.get("devices") or {}

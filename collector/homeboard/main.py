@@ -12,6 +12,7 @@ from . import catalog, config, sources
 from .metrics import metrics
 from .costs import breakdown
 from .agent import attribute_costs
+from .destinations import by_service
 from .build import apps, build
 from .history import History
 
@@ -38,6 +39,10 @@ def collect(cfg, state, history, slow=True):
         fetchers["dns"] = lambda: sources.adguard(src["adguard"])
     if "fx" in src:
         fetchers["fx"] = lambda: sources.fx(state, now)
+    mapped = [svc for cat in catalog.load(cfg["raw_text"])["categories"].values() for svc in cat
+              if svc.get("asn") or svc.get("ip_ranges")]
+    if mapped:
+        fetchers["prefixes"] = lambda: sources.prefixes(mapped, state, now)
     if cfg["statuspage"]:
         fetchers["status_pages"] = lambda: sources.statuspages(cfg["statuspage"])
     fetchers["probes"] = lambda: {p["host"]: sources.probe(p["url"], p.get("insecure", False)) for p in cfg["probe"]}
@@ -85,6 +90,13 @@ def collect(cfg, state, history, slow=True):
     clients = router["data"].get("clients", []) if router.get("ok") else []
     traffic = {c["name"]: (c["down_mbps"], c["up_mbps"]) for c in clients}
     status["devices"] = catalog.devices(text, leases + list(traffic), traffic)
+    nets = blocks.get("prefixes", {}).get("data") or {}
+    status["service_traffic"] = by_service(router["data"].get("ct"), nets) if router.get("ok") and nets else {}
+    # Prefix lists are big and only needed here.
+    status["blocks"] = {**status["blocks"], **({"prefixes": {"ok": blocks["prefixes"]["ok"], "data": {k: len(v) for k, v in nets.items()}}}
+                                                if "prefixes" in blocks else {})}
+    if router.get("ok"):
+        status["blocks"]["router"] = {**router, "data": {k: v for k, v in router["data"].items() if k != "ct"}}
     server_host = src.get("glinet", {}).get("server_client")
     status["server_traffic"] = dict(zip(("down_mbps", "up_mbps"), traffic[server_host])) if server_host in traffic else None
     today = now.date()

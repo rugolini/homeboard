@@ -51,10 +51,12 @@ function card(s, category, [x, y], color, wide) {
        st.active && r.rate_mbps && [t("speed_now"), `${r.rate_mbps.down} ↓ / ${r.rate_mbps.up} ↑ Mbps`],
        svc.status === "uplink:5g" && r.modem?.rsrp != null && [t("signal"), `${r.modem.rsrp} dBm · ${r.modem.type || ""}`],
      ] : [];
+     const flow = s.service_traffic?.[svc.name];
      const tr = [[off ? t("standby") : t("active"), st.up === false ? t("down") : t("up")],
+       flow && ["↓", mbpsText(flow.down_mbps)], flow && ["↑", mbpsText(flow.up_mbps)],
        st.hist && [t("uptime30"), fmt.pct(st.hist.uptime_pct)], st.hist && [t("downtime"), `${st.hist.downtime_min} ${t("minutes")}`],
        st.ms != null && [t("latency"), `${st.ms} ms`], st.desc && [t("status_page"), st.desc], ...extra, svc.monthly_brl != null && [t("costs"), fmt.brl(svc.monthly_brl)], svc.note && ["", svc.note]];
-     return `<div class="si${off ? " off" : ""}"><img src="${F(svc.icon || "Sparkles")}" alt=""><b>${esc(svc.name)}</b><small>${esc(st.up === false ? t("down") : st.degraded ? t("degraded") : off ? t("standby") : t("active"))}</small>
+     return `<div class="si${off ? " off" : ""}"><img src="${F(svc.icon || "Sparkles")}" alt=""><b>${esc(svc.name)}</b><small>${flow && both(flow) >= 0.05 ? `↓ ${mbpsText(flow.down_mbps)}` : esc(st.up === false ? t("down") : st.degraded ? t("degraded") : off ? t("standby") : t("active"))}</small>
        ${tip(svc.name, tr, { c: off ? "var(--line2)" : color, below, daily: st.hist?.daily })}</div>`;
    }).join("")}</div></div>`;
 }
@@ -95,6 +97,8 @@ function renderMap(s) {
     const slot = CLOUD_SLOTS[i % CLOUD_SLOTS.length];
     html += card(s, cat, slot, colors[i % colors.length]);
     links += curve(NET, [slot[0], slot[1] + 28], "cloud");
+    const catFlow = (s.catalog.categories[cat] || []).reduce((x, svc) => x + (both(s.service_traffic?.[svc.name]) || 0), 0);
+    if (catFlow > 0) links += curve(NET, [slot[0], slot[1] + 28], "flow", colors[i % colors.length], catFlow);
   });
   html += node(NET, "Globe with meridians", t("internet"), r?.active || "", tip(t("internet"), [[t("active"), r?.active || "—"]], { c: "#7fdcff" }), "#7fdcff");
   if (m.center) html += card(s, m.center, [600, 336], "#7fdcff", true);

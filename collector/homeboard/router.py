@@ -26,6 +26,7 @@ def router(status, uplinks, previous=None):
         "wifi_clients": sum(n for radio, n in status.get("assoc", {}).items() if not radio.startswith("apcli")),
         "leases": status.get("leases", []),
         "clients": _clients(status, previous),
+        "ct": status.get("ct"),
     }
 
 

@@ -47,7 +47,7 @@ source that fails shows as *unavailable* without affecting the others.
 | HTTP probes | any URL; a login redirect or 401 still counts as up (`insecure = true` for a self-signed LAN certificate) | `[[probe]]` |
 
 The catalog lives in the same file: `[[service]]` (name, category, `active`/`standby`, monthly cost, Fluent icon,
-optional live `status` such as `uplink:fiber` or `app:<host>`), `[[device]]` (matched by DHCP hostname prefix) and
+optional live `status` such as `uplink:fiber` or `app:<host>`, and `asn`/`ip_ranges` to measure live traffic to it), `[[device]]` (matched by DHCP hostname prefix) and
 `[[app]]` (label, container, host). See [`examples/demo/homeboard.toml`](examples/demo/homeboard.toml).
 
 ## Security

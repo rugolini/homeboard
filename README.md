@@ -41,7 +41,7 @@ source that fails shows as *unavailable* without affecting the others.
 | LiteLLM | month-to-date spend per tier and per key (read-only Postgres user) | `[sources.litellm]` |
 | Hermes agent | a copy of `state.db` (never the live file) | `[sources.hermes]` |
 | AdGuard Home | queries and block rate | `[sources.adguard]` |
-| HTTP probes | any URL; a login redirect or 401 still counts as up | `[[probe]]` |
+| HTTP probes | any URL; a login redirect or 401 still counts as up (`insecure = true` for a self-signed LAN certificate) | `[[probe]]` |
 
 The catalog lives in the same file: `[[service]]` (name, category, `active`/`standby`, monthly cost, Fluent icon,
 optional live `status` such as `uplink:fiber` or `app:<host>`), `[[device]]` (matched by DHCP hostname prefix) and

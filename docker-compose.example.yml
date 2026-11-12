@@ -24,7 +24,7 @@ services:
 
   # The collector only lists containers; the proxy refuses every other Docker API call.
   docker-proxy:
-    image: tecnativa/docker-socket-proxy:0.3.0
+    image: tecnativa/docker-socket-proxy:v0.4.2
     container_name: homeboard-docker-proxy
     restart: unless-stopped
     environment:

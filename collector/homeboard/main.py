@@ -30,7 +30,7 @@ def collect(cfg, state, history):
         fetchers["agent"] = lambda: sources.hermes(src["hermes"], now)
     if "adguard" in src:
         fetchers["dns"] = lambda: sources.adguard(src["adguard"])
-    fetchers["probes"] = lambda: {p["host"]: sources.probe(p["url"]) for p in cfg["probe"]}
+    fetchers["probes"] = lambda: {p["host"]: sources.probe(p["url"], p.get("insecure", False)) for p in cfg["probe"]}
 
     status = build(fetchers, now)
     blocks = status["blocks"]

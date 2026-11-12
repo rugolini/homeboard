@@ -5,6 +5,7 @@ import json
 import os
 import pathlib
 import shutil
+import ssl
 import sqlite3
 import subprocess
 import tempfile
@@ -117,13 +118,18 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 _opener = urllib.request.build_opener(_NoRedirect)
+# For services with a self-signed certificate on the LAN; set insecure = true on that probe only.
+_insecure = ssl.create_default_context()
+_insecure.check_hostname = False
+_insecure.verify_mode = ssl.CERT_NONE
+_opener_insecure = urllib.request.build_opener(_NoRedirect, urllib.request.HTTPSHandler(context=_insecure))
 
 
-def probe(url, timeout=6):
+def probe(url, insecure=False, timeout=6):
     """Up means the service answered: a login redirect or 401 still proves it is alive."""
     start = time.monotonic()
     try:
-        status = _opener.open(url, timeout=timeout).status
+        status = (_opener_insecure if insecure else _opener).open(url, timeout=timeout).status
     except urllib.error.HTTPError as err:
         status = err.code
     except (urllib.error.URLError, OSError):

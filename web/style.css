@@ -202,3 +202,35 @@ footer a{color:var(--mute)}footer a:hover{color:var(--text)}
 .diary .r{display:grid;grid-template-columns:1fr auto 90px;gap:12px}.dtitle{display:flex;align-items:center;gap:8px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dtitle img{width:18px;height:18px;flex:none}.dmeta{font-size:11.5px;color:var(--dim)}.diary b{text-align:right}
 em.bad{color:var(--bad);font-style:normal}.small{font-size:11.5px}.hint{font-size:11.5px;color:var(--dim)}
+.app,.si{cursor:pointer}
+.modal{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:rgba(5,6,12,.62);backdrop-filter:blur(6px);animation:fade .2s ease}
+.modal[hidden]{display:none}
+.mbox{position:relative;width:min(1100px,94vw);max-height:88vh;overflow:auto;padding:24px 26px 26px;border-radius:30px;background:rgba(20,23,38,.97);border:1px solid var(--line2);box-shadow:0 40px 120px -30px rgba(0,0,0,.8)}
+.mclose{position:absolute;top:14px;right:16px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line2);background:transparent;color:var(--mute);font-size:20px;cursor:pointer}
+.mhead{display:flex;align-items:center;gap:14px;padding-right:44px}.mhead img{width:54px;height:54px}.mhead h3{font-size:22px;font-weight:600;letter-spacing:-.4px}
+.mhead small{color:var(--dim);font:400 12px 'JetBrains Mono',ui-monospace,monospace}
+.badge-state{margin-left:auto;padding:5px 12px;border-radius:999px;font:500 12px 'JetBrains Mono',ui-monospace,monospace;background:rgba(94,232,176,.12);color:var(--ok)}
+.badge-state.down{background:rgba(255,138,138,.12);color:var(--bad)}.badge-state.paused{background:rgba(255,255,255,.06);color:var(--mute)}
+.btn{padding:9px 16px;border-radius:999px;background:linear-gradient(90deg,#7c6bff,#38c6f0);color:#0b0d16;font-weight:600;font-size:13px;white-space:nowrap}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+.fact{padding:10px 12px;border-radius:14px;background:var(--glass2);border:1px solid var(--line)}.fact span{display:block;font-size:11.5px;color:var(--dim)}.fact b{font:500 15px 'JetBrains Mono',ui-monospace,monospace}
+.ub.big{display:flex;gap:3px;height:28px;margin-top:14px}.ub.big i{flex:1;border-radius:4px;background:var(--ok)}.ub.big i.w{background:var(--warn)}.ub.big i.b{background:var(--bad)}
+.msec{margin-top:18px}.msec h4{font-size:12px;font-weight:600;letter-spacing:1.3px;text-transform:uppercase;color:var(--mute);margin-bottom:8px}
+.msec .fact{margin-bottom:6px}.lead{font-size:18px}
+.mgrid{display:grid;grid-template-columns:1.6fr 1fr;gap:18px}
+.diary .dtitle em{color:var(--dim);font-style:normal;font-size:11px;margin-left:6px}
+.caio{position:absolute;transform:translate(-50%,-50%);z-index:6;display:flex;flex-direction:column;align-items:center;cursor:pointer}
+.caio .face{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 30% 25%,rgba(255,255,255,.18),rgba(169,155,255,.08));border:1px solid rgba(169,155,255,.5)}
+.caio .face img{width:48px;height:48px}.caio b{margin-top:6px;font-size:13px;font-weight:600}
+.caio.idle .face img{filter:saturate(.6);animation:breathe 4s ease-in-out infinite}
+@keyframes breathe{50%{transform:scale(.94)}}
+.caio .zzz{position:absolute;top:-6px;right:-6px;font:700 15px 'Plus Jakarta Sans',system-ui,sans-serif;color:#a99bff}
+.caio .zzz i{position:absolute;font-style:normal;opacity:0;animation:zz 3s ease-in infinite}.caio .zzz i:nth-child(2){animation-delay:1s;font-size:12px}.caio .zzz i:nth-child(3){animation-delay:2s;font-size:10px}
+@keyframes zz{0%{opacity:0;transform:translate(0,0)}25%{opacity:1}100%{opacity:0;transform:translate(16px,-28px)}}
+.caio.busy .face{box-shadow:0 0 0 0 rgba(94,232,176,.6);animation:pulse 1.6s ease-out infinite;border-color:rgba(94,232,176,.7)}
+.caio.busy .face img{animation:work 1.2s ease-in-out infinite}
+@keyframes pulse{to{box-shadow:0 0 0 18px rgba(94,232,176,0)}}@keyframes work{50%{transform:translateY(-4px) rotate(4deg)}}
+.caio .ring{position:absolute;top:-6px;width:88px;height:88px;border-radius:50%;border:2px dashed transparent}
+.caio.busy .ring{border-color:rgba(94,232,176,.45);animation:spin 6s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.caio .balloon{position:absolute;bottom:calc(100% + 8px);right:10px;padding:8px 14px;border-radius:16px 16px 4px 16px;background:#f1f2f8;color:#141726;font-weight:600;font-size:13px;white-space:nowrap;box-shadow:0 10px 30px -10px rgba(0,0,0,.6);animation:fade .3s ease}
+@media (max-width:1100px){.facts{grid-template-columns:1fr 1fr}.mgrid{grid-template-columns:1fr}}

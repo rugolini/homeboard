@@ -19,6 +19,29 @@ _EDIT_TOOLS = ("write_file", "patch")
 _SCRATCH = ("/tmp/", "/var/tmp/")
 
 
+# Short goal of a task, as an i18n key: first from the request, then from the tools in use.
+_GOALS = [
+    (re.compile(r"v[íi]deo|youtu", re.I), "video"),
+    (re.compile(r"revis[ãa]o semanal|model.review", re.I), "weekly_review"),
+    (re.compile(r"obsidian|\bnota", re.I), "note"),
+    (re.compile(r"backup", re.I), "backup"),
+    (re.compile(r"e-?mail|gmail", re.I), "email"),
+    (re.compile(r"pesquis|\bbusca", re.I), "research"),
+]
+_TOOL_GOALS = [("web_search", "web_search"), ("browser", "browsing"), ("write_file", "editing"), ("patch", "editing"),
+               ("terminal", "server"), ("execute_code", "server")]
+
+
+def task_label(request, tools):
+    for pattern, key in _GOALS:
+        if request and pattern.search(request):
+            return key
+    # The tool used most among the recent ones says what is being done; ties go to the latest.
+    keys = [next((k for p, k in _TOOL_GOALS if t.startswith(p)), None) for t in tools or []]
+    counts = {k: keys.count(k) for k in keys if k}
+    return max(counts, key=lambda k: (counts[k], len(keys) - keys[::-1].index(k))) if counts else "working"
+
+
 def _is_error(content):
     try:
         data = json.loads(content or "")
@@ -38,8 +61,11 @@ def _sessions(conn, since):
     for sid, source, title, first, last, tools, request in rows:
         errors = sum(_is_error(c) for (c,) in conn.execute(
             "select content from messages where session_id = ? and role = 'tool'", (sid,)))
+        recent = [t for (t,) in conn.execute("select tool_name from messages where session_id = ? and role = 'tool' "
+                                              "and tool_name is not null order by timestamp desc limit 5", (sid,))]
         out.append({"id": sid, "source": source, "title": _clean(title or request or "") or None, "first": first,
-                    "last": last, "minutes": round((last - first) / 60), "tool_calls": tools or 0, "errors": errors})
+                    "last": last, "minutes": round((last - first) / 60), "tool_calls": tools or 0, "errors": errors,
+                    "task": task_label(title or request, list(reversed(recent)))})
     return out
 
 
@@ -80,6 +106,7 @@ def activity(conn, now):
     return {
         "now": latest and {
             "active": ts - latest["last"] <= ACTIVE_SECONDS, "title": latest["title"], "source": latest["source"],
+            "task": latest["task"],
             "minutes": latest["minutes"], "steps": latest["tool_calls"], "idle_minutes": round((ts - latest["last"]) / 60),
         },
         "diary": diary[:MAX_DIARY],

@@ -31,7 +31,7 @@ def apps(catalog_text, containers, probes):
         else:
             state = "up"
         out.append({"label": app["label"], "host": host, "state": state, "ms": probe["ms"] if probe else None,
-                    **({"icon": app["icon"]} if "icon" in app else {})})
+                    **{k: app[k] for k in ("icon", "container", "console") if k in app}})
     return out
 
 

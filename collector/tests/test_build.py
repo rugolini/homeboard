@@ -45,9 +45,13 @@ class AppsTest(unittest.TestCase):
         containers = [{"Names": ["/vaultwarden"], "State": "running"}, {"Names": ["/RoonServer"], "State": "exited"}]
         probes = {"vaultwarden": {"ok": True, "ms": 12}, "homeassistant": {"ok": False, "ms": None}}
         result = apps(CATALOG, containers, probes)
-        self.assertEqual(result[0], {"label": "Passwords", "host": "vaultwarden", "state": "up", "ms": 12})
+        self.assertEqual(result[0], {"label": "Passwords", "host": "vaultwarden", "state": "up", "ms": 12, "container": "vaultwarden"})
         self.assertEqual(result[1]["state"], "paused")
         self.assertEqual(result[2]["state"], "down")
+
+    def test_console_url_passes_through(self):
+        catalog = '[[app]]\nlabel = "NAS"\nhost = "nas"\nconsole = "https://nas.example/admin"\n'
+        self.assertEqual(apps(catalog, [], {})[0]["console"], "https://nas.example/admin")
 
     def test_missing_container_is_down(self):
         self.assertEqual(apps(CATALOG, [], {"vaultwarden": {"ok": True, "ms": 5}})[0]["state"], "down")

@@ -17,6 +17,7 @@ from . import adguard as adguard_parser
 from . import agent as agent_parser
 from . import statuspage as statuspage_parser
 from . import costs as costs_parser
+from . import dockerstats
 from . import build, hermes as hermes_parser, litellm as litellm_parser, router as router_parser, unraid as unraid_parser
 
 
@@ -55,6 +56,12 @@ def unraid(cfg, state):
 
 def containers(cfg):
     return _get_json(f"{cfg.get('url', 'http://docker-proxy:2375')}/containers/json?all=1")
+
+
+def container_stats(cfg):
+    base = cfg.get("url", "http://docker-proxy:2375")
+    return {name: dockerstats.container_stats(_get_json(f"{base}/containers/{name}/stats?stream=false", timeout=15))
+            for name in cfg.get("stats", [])}
 
 
 def backup(cfg, now):

@@ -56,7 +56,7 @@ function card(s, category, [x, y], color, wide) {
        flow && ["↓", mbpsText(flow.down_mbps)], flow && ["↑", mbpsText(flow.up_mbps)],
        st.hist && [t("uptime30"), fmt.pct(st.hist.uptime_pct)], st.hist && [t("downtime"), `${st.hist.downtime_min} ${t("minutes")}`],
        st.ms != null && [t("latency"), `${st.ms} ms`], st.desc && [t("status_page"), st.desc], ...extra, svc.monthly_brl != null && [t("costs"), fmt.brl(svc.monthly_brl)], svc.note && ["", svc.note]];
-     return `<div class="si${off ? " off" : ""}"><img src="${F(svc.icon || "Sparkles")}" alt=""><b>${esc(svc.name)}</b><small>${flow && both(flow) >= 0.05 ? `↓ ${mbpsText(flow.down_mbps)}` : esc(st.up === false ? t("down") : st.degraded ? t("degraded") : off ? t("standby") : t("active"))}</small>
+     return `<div class="si${off ? " off" : ""}" data-svc="${esc(svc.name)}"><img src="${F(svc.icon || "Sparkles")}" alt=""><b>${esc(svc.name)}</b><small>${flow && both(flow) >= 0.05 ? `↓ ${mbpsText(flow.down_mbps)}` : esc(st.up === false ? t("down") : st.degraded ? t("degraded") : off ? t("standby") : t("active"))}</small>
        ${tip(svc.name, tr, { c: off ? "var(--line2)" : color, below, daily: st.hist?.daily })}</div>`;
    }).join("")}</div></div>`;
 }
@@ -129,11 +129,12 @@ function renderMap(s) {
   const bk = block(s, "backup");
   html += `<div class="server"><div class="top"><img src="${F("Card file box")}" alt=""><div><b>${t("server")}</b><small>${(s.apps || []).length} apps</small></div>
     <div class="vit">${vit}${bk ? `<span>${t("backup")} <b>${bk.ok && !bk.stale ? "ok" : t("attention")}</b></span>` : ""}</div></div>
-    <div class="apps">${(s.apps || []).map(a => `<a class="app${a.state === "paused" ? " paused" : ""}" ${a.host && domain ? `href="https://${a.host}.${domain}" target="_blank" rel="noopener"` : ""}>
+    <div class="apps">${(s.apps || []).map(a => `<a class="app${a.state === "paused" ? " paused" : ""}" data-app="${esc(a.label)}" href="#">
       <i class="status${a.state === "up" ? "" : a.state === "paused" ? " off" : " warn"}"></i><img src="${F(a.icon || "Gear")}" alt=""><b>${esc(a.label)}</b>
       ${tip(a.label, [[t(a.state), a.ms != null ? `${a.ms} ms` : ""], s.history?.[`app:${a.host}`] && [t("uptime30"), fmt.pct(s.history[`app:${a.host}`].uptime_pct)]], { daily: s.history?.[`app:${a.host}`]?.daily })}</a>`).join("")}</div></div>`;
+  html += caio(s);
   const stage = $("stage");
-  stage.querySelectorAll(".node,.svc,.pill,.group,.server").forEach(e => e.remove());
+  stage.querySelectorAll(".node,.svc,.pill,.group,.server,.caio").forEach(e => e.remove());
   stage.insertAdjacentHTML("beforeend", html);
   $("links").innerHTML = links;
 }
@@ -186,39 +187,89 @@ const ago = m => m < 60 ? `${m} min` : m < 1440 ? `${Math.round(m / 60)} h` : `$
 const hhmm = ts => new Date(ts * 1000).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 const brlFromUsd = (s, usd) => s.costs?.fx && usd != null ? fmt.brl(usd * s.costs.fx.usd_brl) : fmt.usd(usd);
 
-function renderAgent(s) {
-  if (!section("agent", s, "agent")) return;
-  const a = block(s, "agent"), act = s.agent_activity, name = s.agent_name || "Hermes";
-  document.querySelector('[data-t="agent"]').textContent = name;
-  if (!a || !act) { $("agent").innerHTML = unavailable("Robot", name); return; }
-  const n = act.now, b = s.agent_budget, h = act.health;
-  const sentence = !n ? t("agent_never") : n.active
-    ? `<b>${esc(name)}</b> ${t("agent_working")} <b>«${esc(n.title || t("untitled"))}»</b> · ${t("via")} ${esc(n.source)} · ${t("for")} ${ago(n.minutes)} · ${n.steps} ${t("steps")}`
-    : `<b>${esc(name)}</b> ${t("agent_free")} · ${t("last_task")} ${ago(n.idle_minutes)}: «${esc(n.title || t("untitled"))}»`;
-  const todayCost = act.diary.filter(d => new Date(d.first * 1000).toDateString() === new Date().toDateString()).reduce((x, d) => x + (d.cost_usd || 0), 0);
-  const pctBudget = b?.max_usd ? Math.min(100, 100 * b.spend_usd / b.max_usd) : null;
-  $("agent").innerHTML = `
-   <div class="card agent-now ${n?.active ? "busy" : ""}" style="grid-column:span 3"><div class="body now-line">
-     <img src="${F(n?.active ? "Robot" : "Zzz")}" onerror="this.src='${F("Robot")}'" alt=""><div>${sentence}</div></div></div>
-   <div class="card" style="grid-column:span 2"><div class="hd"><img src="${F("Spiral calendar")}" onerror="this.src='${F("Memo")}'" alt=""><h2>${t("diary")}</h2><span>${t("last_7_days")}</span></div>
-     <div class="dlist diary">${act.diary.map(d => `<div class="r">
-       <span class="dtitle"><img src="${F(SOURCE_ICON[d.source] || "Gear")}" alt="">${esc(d.title || t("untitled"))}</span>
-       <span class="mono dmeta">${hhmm(d.first)} · ${ago(d.minutes)} · ${d.tool_calls} ${t("tools_short")}${d.errors ? ` · <em class="bad">${d.errors} ${t("errors_short")}</em>` : ""}</span>
-       <b class="mono">${d.cost_usd ? brlFromUsd(s, d.cost_usd) : "—"}</b></div>`).join("") || `<div class="r"><span>—</span></div>`}</div></div>
-   <div class="card"><div class="hd"><img src="${F("Coin")}" alt=""><h2>${t("cost_eff")}</h2></div><div class="body">
-     ${b ? `<div class="line"><span>${t("budget")} (${esc(b.duration || "")})</span><b class="mono">${brlFromUsd(s, b.spend_usd)} / ${brlFromUsd(s, b.max_usd)}</b></div>
-       <div class="prog"><i style="--w:${pctBudget ?? 0}%;width:${pctBudget ?? 0}%;background:linear-gradient(90deg,#5ee8b0,${pctBudget > 80 ? "#ff8a8a" : "#ffd36b"})"></i></div>
-       ${b.reset_at ? `<div class="line"><span>${t("resets")}</span><b>${new Date(b.reset_at).toLocaleDateString()}</b></div>` : ""}` : ""}
-     <div class="line"><span>${t("cost_today")}</span><b class="mono">${brlFromUsd(s, todayCost)}</b></div>
-     <div class="line"><span>${t("cache_pct")}</span><b class="mono">${h.cache_pct != null ? h.cache_pct + "%" : "—"}</b></div>
-     ${Object.entries(a.tiers || {}).map(([tier, model]) => `<div class="line"><span>${esc(tier)}</span><b class="mono small">${esc(model)}</b></div>`).join("")}</div></div>
-   <div class="card"><div class="hd"><img src="${F("Stethoscope")}" onerror="this.src='${F("Herb")}'" alt=""><h2>${t("agent_health")}</h2></div><div class="body">
-     <div class="line"><span>${t("tool_calls")}</span><b>${h.tool_calls_today}</b></div>
-     <div class="line"><span>${t("errors")}</span><b style="color:${h.tool_errors_today ? "var(--warn)" : "var(--ok)"}">${h.tool_errors_today}${h.tool_calls_today ? ` (${Math.round(100 * h.tool_errors_today / h.tool_calls_today)}%)` : ""}</b></div>
-     ${h.errors_by_tool.map(([tool, c]) => `<div class="line"><span class="mono">${esc(tool)}</span><b>${c}</b></div>`).join("")}</div></div>
-   <div class="card" style="grid-column:span 2"><div class="hd"><img src="${F("Hammer and wrench")}" alt=""><h2>${t("changes")}</h2><span>${t("last_7_days")}</span></div>
-     <div class="dlist">${act.changes.map(c => `<div class="r"><span class="mono small">${c.kind === "file" ? "✎" : "›"} ${esc(c.text)}</span><b class="mono small">${hhmm(c.time)}</b></div>`).join("") || `<div class="r"><span>${t("no_changes")}</span></div>`}</div>
-     <div class="body"><p class="hint">${t("changes_hint")}</p></div></div>`;
+// ---------- details popup (every app and service) ----------
+let MODAL = null, LAST = null;
+const fact = (k, v) => v == null || v === "" ? "" : `<div class="fact"><span>${esc(k)}</span><b>${v}</b></div>`;
+const bigBars = daily => daily ? `<div class="ub big">${daily.map(v => `<i class="${v == null ? "" : v < 99 ? (v < 90 ? "b" : "w") : ""}" style="${v == null ? "opacity:.15" : ""}" title="${v == null ? "" : v + "%"}"></i>`).join("")}</div>` : "";
+
+function consoleUrl(s, item) {
+  if (item.console) return item.console;
+  return item.host && s.site.domain ? `https://${item.host}.${s.site.domain}` : null;
+}
+
+function agentPanel(s) {
+  const act = s.agent_activity, b = s.agent_budget, a = block(s, "agent");
+  if (!act) return "";
+  const n = act.now, h = act.health, name = s.agent_name || "Hermes";
+  const access = {};
+  act.diary.forEach(d => access[d.source] = (access[d.source] || 0) + 1);
+  const pct = b?.max_usd ? Math.min(100, 100 * b.spend_usd / b.max_usd) : 0;
+  const today = act.diary.filter(d => new Date(d.first * 1000).toDateString() === new Date().toDateString()).reduce((x, d) => x + (d.cost_usd || 0), 0);
+  return `
+   <div class="msec"><h4>${esc(name)}</h4><p class="lead">${n?.active ? `${t("task_" + n.task)} · ${ago(n.minutes)}` : `${t("idle")} · ${t("last_task")} ${ago(n?.idle_minutes ?? 0)}`}</p></div>
+   <div class="mgrid">
+     <div class="msec"><h4>${t("tasks")}</h4><div class="dlist diary">${act.diary.map(d => `<div class="r">
+       <span class="dtitle"><img src="${F(SOURCE_ICON[d.source] || "Gear")}" alt="">${esc(t("task_" + d.task))}<em class="mono"> ${esc((d.title || "").slice(0, 60))}</em></span>
+       <span class="mono dmeta">${hhmm(d.first)} · ${ago(d.minutes)}${d.errors ? ` · <em class="bad">${d.errors} ${t("errors_short")}</em>` : ""}</span>
+       <b class="mono">${d.cost_usd ? brlFromUsd(s, d.cost_usd) : "—"}</b></div>`).join("")}</div></div>
+     <div>
+       <div class="msec"><h4>${t("cost_eff")}</h4>
+         ${b ? fact(`${t("budget")} (${b.duration || ""})`, `${brlFromUsd(s, b.spend_usd)} / ${brlFromUsd(s, b.max_usd)}`) + `<div class="prog"><i style="width:${pct}%;background:linear-gradient(90deg,#5ee8b0,${pct > 80 ? "#ff8a8a" : "#ffd36b"})"></i></div>` : ""}
+         ${fact(t("cost_today"), brlFromUsd(s, today))}${fact(t("cache_pct"), h.cache_pct != null ? h.cache_pct + "%" : "—")}
+         ${Object.entries(a?.tiers || {}).map(([k, v]) => fact(k, `<span class="mono small">${esc(v)}</span>`)).join("")}</div>
+       <div class="msec"><h4>${t("access")}</h4>${Object.entries(access).map(([k, v]) => fact(k, `${v} ${t("tasks_short")}`)).join("")}</div>
+       <div class="msec"><h4>${t("agent_health")}</h4>${fact(t("tool_calls"), h.tool_calls_today)}${fact(t("errors"), `${h.tool_errors_today}`)}
+         ${h.errors_by_tool.map(([k, v]) => fact(k, v)).join("")}</div>
+     </div>
+   </div>
+   <div class="msec"><h4>${t("changes")}</h4><div class="dlist">${act.changes.map(c => `<div class="r"><span class="mono small">${c.kind === "file" ? "✎" : "›"} ${esc(c.text)}</span><b class="mono small">${new Date(c.time * 1000).toLocaleString(undefined, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</b></div>`).join("") || `<div class="r"><span>${t("no_changes")}</span></div>`}</div></div>`;
+}
+
+function appModal(s, app) {
+  const hist = s.history?.[`app:${app.host}`], st = block(s, "container_stats")?.[app.container];
+  const agent = s.agent_activity && app.container && app.container === (s.map?.agent_container || "hermes");
+  const url = consoleUrl(s, app);
+  return `<div class="mhead"><img src="${F(app.icon || "Gear")}" alt=""><div><h3>${esc(app.label)}</h3><small>${esc(app.container || app.host || "")}</small></div>
+      <span class="badge-state ${app.state}">${t(app.state)}</span>${url ? `<a class="btn" href="${url}" target="_blank" rel="noopener">${t("open_console")} ↗</a>` : ""}</div>
+    <div class="facts">${fact(t("uptime30"), hist ? fmt.pct(hist.uptime_pct) : null)}${fact(t("downtime"), hist ? `${hist.downtime_min} ${t("minutes")}` : null)}
+      ${fact(t("latency"), app.ms != null ? `${app.ms} ms` : null)}${st ? fact("CPU", st.cpu_pct != null ? `${st.cpu_pct}%` : "—") + fact(t("memory"), fmt.bytes(st.mem_bytes)) + fact(t("processes"), st.pids) : ""}</div>
+    ${bigBars(hist?.daily)}${agent ? agentPanel(s) : ""}`;
+}
+
+function svcModal(s, svc) {
+  const st = serviceState(s, svc), flow = s.service_traffic?.[svc.name], hist = st.hist;
+  return `<div class="mhead"><img src="${F(svc.icon || "Sparkles")}" alt=""><div><h3>${esc(svc.name)}</h3><small>${esc(t("cat_" + svc.category))}</small></div>
+      <span class="badge-state ${st.up === false ? "down" : "up"}">${st.active ? t("active") : t("standby")}</span>${svc.console ? `<a class="btn" href="${svc.console}" target="_blank" rel="noopener">${t("open_console")} ↗</a>` : ""}</div>
+    <div class="facts">${fact(t("costs"), svc.monthly_brl != null ? fmt.brl(svc.monthly_brl) : t("missing_cost"))}${fact(t("status_page"), st.desc)}
+      ${fact("↓", flow ? mbpsText(flow.down_mbps) : null)}${fact("↑", flow ? mbpsText(flow.up_mbps) : null)}
+      ${fact(t("uptime30"), hist ? fmt.pct(hist.uptime_pct) : null)}${fact(t("latency"), st.ms != null ? `${st.ms} ms` : null)}${fact("", svc.note ? esc(svc.note) : null)}</div>${bigBars(hist?.daily)}`;
+}
+
+function openModal(kind, key) { MODAL = { kind, key }; drawModal(); $("modal").hidden = false; }
+function closeModal() { MODAL = null; $("modal").hidden = true; }
+function drawModal() {
+  if (!MODAL || !LAST) return;
+  const s = LAST;
+  if (MODAL.kind === "app") { const app = (s.apps || []).find(a => a.label === MODAL.key); if (app) $("mbody").innerHTML = appModal(s, app); }
+  if (MODAL.kind === "svc") { const svc = Object.values(s.catalog.categories).flat().find(x => x.name === MODAL.key); if (svc) $("mbody").innerHTML = svcModal(s, svc); }
+}
+document.addEventListener("click", e => {
+  const app = e.target.closest(".app[data-app]"), svc = e.target.closest(".si[data-svc]"), caio = e.target.closest(".caio");
+  if (app) { e.preventDefault(); openModal("app", app.dataset.app); }
+  else if (svc) openModal("svc", svc.dataset.svc);
+  else if (caio && LAST) { const h = (LAST.apps || []).find(a => a.container === (LAST.map?.agent_container || "hermes")); if (h) openModal("app", h.label); }
+  else if (e.target.id === "modal" || e.target.classList.contains("mclose")) closeModal();
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+// ---------- the agent as a presence on the map ----------
+function caio(s) {
+  const n = s.agent_activity?.now;
+  if (!n) return "";
+  const name = s.agent_name || "Hermes";
+  return `<div class="caio ${n.active ? "busy" : "idle"}" style="${pct(1125, 335)}" title="${esc(name)}">
+    ${n.active ? `<div class="balloon">${esc(t("task_" + n.task))}…</div>` : `<div class="zzz"><i>z</i><i>z</i><i>z</i></div>`}
+    <div class="ring"></div><div class="face"><img src="${F("Robot")}" alt=""></div><b>${esc(name)}</b></div>`;
 }
 
 function renderCosts(s) {
@@ -250,7 +301,8 @@ async function refresh() {
     $("site-sub").textContent = s.site.subtitle || "";
     document.querySelectorAll("[data-t]").forEach(e => e.textContent = t(e.dataset.t));
     $("updated").textContent = new Date(s.generated_at).toLocaleTimeString(s.site.language);
-    renderStrip(s); renderMap(s); renderStorage(s); renderAgent(s); renderCosts(s);
+    LAST = s;
+    renderStrip(s); renderMap(s); renderStorage(s); renderCosts(s); drawModal();
   } catch (e) {
     console.error(e);
   }

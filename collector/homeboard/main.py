@@ -27,6 +27,8 @@ def collect(cfg, state, history, slow=True):
         fetchers["server"] = lambda: sources.unraid(src["unraid"], state)
     if "docker" in src:
         fetchers["containers"] = lambda: sources.containers(src["docker"])
+    if src.get("docker", {}).get("stats"):
+        fetchers["container_stats"] = lambda: sources.container_stats(src["docker"])
     if "backup" in src:
         fetchers["backup"] = lambda: sources.backup(src["backup"], now)
     if "glinet" in src:

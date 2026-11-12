@@ -23,7 +23,9 @@ def router(status, uplinks, previous=None):
             "active": sum(1 for h in handshakes if h and status["time"] - h < VPN_ACTIVE_SECONDS),
             "last_handshake": max(handshakes, default=0) or None,
         },
-        "wifi_clients": sum(n for radio, n in status.get("assoc", {}).items() if not radio.startswith("apcli")),
+        # Older scripts sent per-radio counts; newer ones avoid polling the Wi-Fi driver and use the client list.
+        "wifi_clients": (sum(n for radio, n in status["assoc"].items() if not radio.startswith("apcli")) if "assoc" in status
+                         else sum(1 for c in status.get("clients", []) if c.get("online") and c.get("iface") in ("2.4G", "5G"))),
         "leases": status.get("leases", []),
         "clients": _clients(status, previous),
         "ct": status.get("ct"),

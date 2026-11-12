@@ -50,6 +50,10 @@ class RouterTest(unittest.TestCase):
         vpn = router(STATUS, UPLINKS)["vpn"]
         self.assertEqual(vpn, {"peers": 4, "active": 1, "last_handshake": 1794499940})
 
+    def test_wifi_clients_counted_from_client_list_without_assoc(self):
+        status = {k: v for k, v in STATUS.items() if k != "assoc"}
+        self.assertEqual(router(status, UPLINKS)["wifi_clients"], 1)
+
     def test_wifi_clients_sum_access_point_radios_only(self):
         self.assertEqual(router(STATUS, UPLINKS)["wifi_clients"], 9)
 

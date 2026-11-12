@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>homeboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="blobs"><i></i><i></i><i></i></div>
+<div class="wrap">
+  <header>
+    <div class="brand"><img data-f="House" alt=""><div><h1 id="site-name">homeboard</h1><small id="site-sub"></small></div></div>
+    <div class="clock"><span id="dd"></span><b id="hh">--:--</b></div>
+  </header>
+  <div class="strip" id="strip"></div>
+
+  <section class="stage-card">
+    <div class="hd"><h2 data-t="map"></h2><span data-t="hover"></span></div>
+    <div class="stage" id="stage"><svg class="links" viewBox="0 0 1200 860" preserveAspectRatio="none" id="links"></svg></div>
+  </section>
+
+  <div class="title"><img data-f="Card file box" alt=""><h3 data-t="storage"></h3><p data-t="storage_sub"></p></div>
+  <section class="grid4" id="storage"></section>
+
+  <div class="title"><img data-f="Robot" alt=""><h3 data-t="agent"></h3><p data-t="agent_sub"></p></div>
+  <section class="grid3" id="agent"></section>
+
+  <div class="title"><img data-f="Money bag" alt=""><h3 data-t="costs"></h3><p data-t="costs_sub"></p></div>
+  <section class="grid3 costs" id="costs"></section>
+
+  <footer><a href="https://github.com/rugolini/homeboard">homeboard</a> · <span data-t="updated"></span> <span id="updated">—</span></footer>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

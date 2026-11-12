@@ -1,0 +1,157 @@
+# Demo home: everything here is fictional. Run from the repo root:
+#   HOMEBOARD_CONFIG=examples/demo/homeboard.toml python -m homeboard.main   (with PYTHONPATH=collector)
+
+[site]
+name = "Demo Home"
+subtitle = "Apartamento de exemplo"
+domain = "example.org"
+language = "pt-BR"
+timezone = "America/Sao_Paulo"
+
+[collector]
+interval_seconds = 30
+data_dir = "examples/demo/data"
+web_dir = "web"
+port = 8080
+
+# Which catalog categories go where on the map.
+[map]
+cloud = ["dns", "security", "code", "ai", "cloud", "streaming"]
+center = "connection"
+left = "access"
+right = "lan"
+
+[sources.unraid]
+emhttp = "examples/demo/emhttp"
+proc = "examples/demo/proc"
+hwmon = "examples/demo/hwmon"
+
+[sources.backup]
+status_file = "examples/demo/data/backup.json"
+
+[[probe]]
+host = "example"
+url = "https://example.org/"
+
+# ---------- services (what the home pays for or depends on) ----------
+[[service]]
+name = "Fiber ISP"
+category = "connection"
+icon = "Link"
+status = "uplink:fiber"
+monthly_brl = 120
+
+[[service]]
+name = "Mobile 5G"
+category = "connection"
+role = "standby"
+icon = "Antenna bars"
+status = "uplink:5g"
+monthly_brl = 60
+
+[[service]]
+name = "Cloudflare"
+category = "dns"
+icon = "Cloud"
+monthly_brl = 0
+
+[[service]]
+name = "deSEC"
+category = "dns"
+role = "standby"
+icon = "Bookmark tabs"
+monthly_brl = 0
+
+[[service]]
+name = "Let's Encrypt"
+category = "security"
+icon = "Locked"
+monthly_brl = 0
+
+[[service]]
+name = "GitHub"
+category = "code"
+icon = "Octopus"
+monthly_brl = 0
+
+[[service]]
+name = "AI assistant"
+category = "ai"
+icon = "Sparkles"
+monthly_brl = 100
+
+[[service]]
+name = "Cloud storage"
+category = "cloud"
+icon = "Cloud with rain"
+monthly_brl = 35
+
+[[service]]
+name = "Video streaming"
+category = "streaming"
+icon = "Popcorn"
+monthly_brl = 45
+
+[[service]]
+name = "Tunnel"
+category = "access"
+icon = "Cloud"
+monthly_brl = 0
+
+[[service]]
+name = "WireGuard"
+category = "access"
+icon = "Key"
+monthly_brl = 0
+
+[[service]]
+name = "Local DNS"
+category = "lan"
+icon = "Shield"
+status = "app:example"
+monthly_brl = 0
+
+[[service]]
+name = "Server power"
+category = "home"
+icon = "High voltage"
+monthly_brl = 45
+
+# ---------- devices (matched by DHCP hostname prefix) ----------
+[[device]]
+name = "Laptop"
+group = "personal"
+icon = "Laptop"
+match = ["laptop"]
+
+[[device]]
+name = "Phone"
+group = "personal"
+icon = "Mobile phone"
+match = ["phone"]
+
+[[device]]
+name = "Air conditioner"
+group = "iot"
+icon = "Snowflake"
+match = ["ac-"]
+
+[[device]]
+name = "TV"
+group = "iot"
+icon = "Television"
+match = ["tv-"]
+
+# ---------- apps running on the server ----------
+[[app]]
+label = "Chat"
+host = "example"
+icon = "Speech balloon"
+
+[[app]]
+label = "Files"
+icon = "File folder"
+
+[[app]]
+label = "Movies"
+icon = "Clapper board"

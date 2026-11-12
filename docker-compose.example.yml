@@ -1,0 +1,36 @@
+# Example deployment on an Unraid host. Copy, adjust paths, keep secrets in .env (never in the config file).
+services:
+  homeboard:
+    build: .
+    container_name: homeboard
+    restart: unless-stopped
+    environment:
+      HOMEBOARD_CONFIG: /config/homeboard.toml
+      TZ: America/Sao_Paulo
+      LITELLM_DSN: ${LITELLM_DSN:-}          # postgres://readonly_user:password@host:5432/db
+      ADGUARD_USER: ${ADGUARD_USER:-}
+      ADGUARD_PASSWORD: ${ADGUARD_PASSWORD:-}
+    volumes:
+      - ./homeboard.toml:/config/homeboard.toml:ro
+      - ./data:/data
+      - ./keys:/keys:ro                       # SSH key + known_hosts for the router (forced command)
+      - /var/local/emhttp:/host/emhttp:ro     # Unraid disk/array state; reading it never wakes a disk
+      - /proc:/host/proc:ro
+      - /sys/class/hwmon:/host/hwmon:ro
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  # The collector only lists containers; the proxy refuses every other Docker API call.
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    container_name: homeboard-docker-proxy
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      POST: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    read_only: true
+    tmpfs: [/run]

@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+/data/
+examples/demo/data/status.json
+examples/demo/data/history.json
+*.tmp

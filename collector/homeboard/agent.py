@@ -16,6 +16,7 @@ _CHANGE = re.compile(r"\b(docker (restart|rm|stop|start|compose|pull|run|kill|up
                      r"chmod|chown|uci (set|commit|delete)|git (push|commit)|apt |pip install|kill |reboot|tar x|"
                      r"curl .*-X ?(POST|PUT|DELETE|PATCH))")
 _EDIT_TOOLS = ("write_file", "patch")
+_SCRATCH = ("/tmp/", "/var/tmp/")
 
 
 def _is_error(content):
@@ -56,7 +57,7 @@ def _changes(conn, since):
                 args = json.loads(fn.get("arguments") or "{}")
             except ValueError:
                 args = {}
-            if fn.get("name") in _EDIT_TOOLS and args.get("path"):
+            if fn.get("name") in _EDIT_TOOLS and args.get("path") and not args["path"].startswith(_SCRATCH):
                 out.append({"time": ts, "kind": "file", "text": _clean(args["path"])})
             elif fn.get("name") == "terminal" and _CHANGE.search(args.get("command", "")):
                 out.append({"time": ts, "kind": "command", "text": _clean(args["command"])})

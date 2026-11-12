@@ -98,7 +98,9 @@ def litellm(cfg, now):
             agent = {
                 "budget": b and {"max_usd": float(b[0]) if b[0] is not None else None, "duration": b[1],
                                  "reset_at": b[2].isoformat() if b[2] else None, "spend_usd": float(b[3] or 0)},
-                "requests": [(r[0].timestamp(), float(r[1] or 0)) for r in reqs],
+                # LiteLLM stores naive UTC timestamps.
+                "requests": [((r[0] if r[0].tzinfo else r[0].replace(tzinfo=dt.timezone.utc)).timestamp(), float(r[1] or 0))
+                             for r in reqs],
             }
     finally:
         conn.close()

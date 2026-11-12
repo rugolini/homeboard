@@ -35,6 +35,7 @@ def db():
         ("a", "tool", '{"error": "permission denied"}', "write_file", None, T - 2960),
         ("a", "assistant", "", None, call("terminal", command="ls -la /tmp"), T - 2950),
         ("a", "tool", '{"output": "ok"}', "terminal", None, T - 2400),
+        ("a", "assistant", "", None, call("write_file", path="/tmp/x/scratch.json", content="x"), T - 2390),
         ("b", "user", "rode a revisão semanal", None, None, T - 600),
         ("b", "tool", '{"output": "ok"}', "terminal", None, T - 60),
         ("old", "user", "coisa antiga", None, None, T - 86400 * 9),
@@ -82,6 +83,9 @@ class HealthTest(unittest.TestCase):
 
 
 class ChangesTest(unittest.TestCase):
+    def test_scratch_files_in_tmp_are_not_changes(self):
+        self.assertNotIn("/tmp/x/scratch.json", [c["text"] for c in activity(db(), NOW)["changes"]])
+
     def test_file_edits_and_state_changing_commands_only(self):
         changes = activity(db(), NOW)["changes"]
         self.assertEqual([c["kind"] for c in changes], ["file", "command"])

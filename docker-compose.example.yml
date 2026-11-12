@@ -33,4 +33,4 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     read_only: true
-    tmpfs: [/run]
+    tmpfs: [/run, /tmp]

@@ -71,5 +71,8 @@
   "minutes": "min",
   "status_page": "status page",
   "degraded": "degraded",
-  "agent_month": "month spend (gateway)"
+  "agent_month": "month spend (gateway)",
+  "subscriptions": "Subscriptions",
+  "tier_other": "other models",
+  "no_fx": "no exchange rate"
 }

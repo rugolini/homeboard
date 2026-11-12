@@ -10,6 +10,7 @@ import time
 
 from . import catalog, config, sources
 from .metrics import metrics
+from .costs import breakdown
 from .build import apps, build
 from .history import History
 
@@ -31,6 +32,8 @@ def collect(cfg, state, history):
         fetchers["agent"] = lambda: sources.hermes(src["hermes"], now)
     if "adguard" in src:
         fetchers["dns"] = lambda: sources.adguard(src["adguard"])
+    if "fx" in src:
+        fetchers["fx"] = lambda: sources.fx(state, now)
     if cfg["statuspage"]:
         fetchers["status_pages"] = lambda: sources.statuspages(cfg["statuspage"])
     fetchers["probes"] = lambda: {p["host"]: sources.probe(p["url"], p.get("insecure", False)) for p in cfg["probe"]}
@@ -54,6 +57,7 @@ def collect(cfg, state, history):
     status["map"] = cfg["map"]
     status["agent_key"] = src.get("hermes", {}).get("litellm_key")
     status["catalog"] = catalog.load(text)
+    status["costs"] = breakdown(status["catalog"], blocks.get("ai_spend", {}).get("data"), blocks.get("fx", {}).get("data"))
     status["apps"] = apps(text, containers, probes)
     leases = router["data"]["leases"] if router.get("ok") else []
     status["devices"] = catalog.devices(text, leases)

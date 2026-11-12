@@ -45,7 +45,7 @@
   "costs_sub": "assinaturas e uso do mês",
   "month_total": "Total do mês",
   "fixed": "fixos",
-  "ai_usage": "uso de IA",
+  "ai_usage": "Uso de IA",
   "missing_cost": "sem valor no catálogo",
   "uptime30": "uptime 30 dias",
   "downtime": "fora do ar",
@@ -71,5 +71,8 @@
   "minutes": "min",
   "status_page": "página de status",
   "degraded": "instável",
-  "agent_month": "gasto no mês (gateway)"
+  "agent_month": "gasto no mês (gateway)",
+  "subscriptions": "Assinaturas",
+  "tier_other": "outros modelos",
+  "no_fx": "sem câmbio"
 }

@@ -26,6 +26,9 @@ emhttp = "examples/demo/emhttp"
 proc = "examples/demo/proc"
 hwmon = "examples/demo/hwmon"
 
+# USD/BRL from Banco Central (PTAX), used to show AI spend in reais.
+[sources.fx]
+
 [sources.backup]
 status_file = "examples/demo/data/backup.json"
 

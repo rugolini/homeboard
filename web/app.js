@@ -174,17 +174,22 @@ function renderAgent(s) {
 }
 
 function renderCosts(s) {
-  const c = s.catalog.costs, ai = block(s, "ai_spend"), cats = s.catalog.categories;
-  const groups = Object.entries(cats).filter(([, items]) => items.some(i => i.monthly_brl));
+  const c = s.costs;
+  if (!c) return;
+  const label = p => p.key === "subscriptions" || p.key === "ai_usage" ? t(p.key) : t("cat_" + p.key) !== "cat_" + p.key ? t("cat_" + p.key) : p.key === "other" ? t("tier_other") : p.key;
+  const money = p => p.brl != null ? fmt.brl(p.brl) : `${fmt.usd(p.usd)} · ${t("no_fx")}`;
+  const share = p => p.brl != null && c.total_brl ? ` <span class="share">${Math.round(100 * p.brl / c.total_brl)}%</span>` : "";
   $("costs").innerHTML = `
-   <div class="card"><div class="hd"><img src="${F("Bar chart")}" alt=""><h2>${t("month_total")}</h2></div>
-     <div class="costhead"><div class="big mono">${fmt.brl(c.total_brl)}<span>${t("fixed")}</span></div>
-       ${ai ? `<div><div class="mono" style="font-size:18px;color:var(--mute)">${fmt.usd(ai.month_usd)}</div><span style="color:var(--dim);font-size:12px">${t("ai_usage")}</span></div>` : ""}</div>
+   <div class="card" style="grid-column:span 3"><div class="hd"><img src="${F("Bar chart")}" alt=""><h2>${t("month_total")}</h2>
+     <span class="mono">${c.fx ? `US$ 1 = ${fmt.brl(c.fx.usd_brl)} · PTAX ${esc(c.fx.date)}` : t("no_fx")}</span></div>
+     <div class="costhead"><div class="big mono">${fmt.brl(c.total_brl)}</div></div>
+     <div class="breakdown">${c.parts.map(p => `
+       <div class="bpart"><div class="gh"><span>${esc(label(p))}${share(p)}</span><b>${money(p)}</b></div>
+         ${p.children.map(ch => `<div class="brow"><span>${esc(label(ch))}${ch.usd != null ? ` <em class="mono">${fmt.usd(ch.usd)}</em>` : ""}</span><b class="mono">${money(ch)}</b></div>
+           ${(ch.items || []).map(i => `<div class="brow sub"><span>${esc(i.name)}</span><b class="mono">${fmt.brl(i.brl)}</b></div>`).join("")}`).join("")}
+       </div>`).join("")}</div>
      ${c.missing.length ? `<div class="body"><div class="line"><span>${t("missing_cost")}</span><b>${c.missing.map(esc).join(", ")}</b></div></div>` : ""}
-     ${ai ? `<div class="dlist">${Object.entries(ai.by_tier).map(([k, v]) => `<div class="r"><span>${esc(k)}</span><b class="mono">${fmt.usd(v)}</b></div>`).join("")}</div>` : ""}</div>
-   <div class="card" style="grid-column:span 2"><div class="hd"><img src="${F("Credit card")}" alt=""><h2>${t("costs")}</h2></div><div class="tbl">
-     ${groups.map(([cat, items]) => `<div class="gh"><span>${esc(t("cat_" + cat))}</span><b>${fmt.brl(c.by_category[cat])}</b></div>` +
-       items.filter(i => i.monthly_brl != null).map(i => `<div class="r"><img src="${F(i.icon || "Coin")}" alt=""><div>${esc(i.name)}<span>${i.role === "standby" ? t("standby") : ""}</span></div><b>${fmt.brl(i.monthly_brl)}</b><em></em></div>`).join("")).join("")}</div></div>`;
+   </div>`;
 }
 
 async function refresh() {

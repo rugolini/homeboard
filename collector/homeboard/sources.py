@@ -15,6 +15,7 @@ import urllib.request
 
 from . import adguard as adguard_parser
 from . import statuspage as statuspage_parser
+from . import costs as costs_parser
 from . import build, hermes as hermes_parser, litellm as litellm_parser, router as router_parser, unraid as unraid_parser
 
 
@@ -111,6 +112,23 @@ def adguard(cfg):
     password = os.environ.get(cfg.get("password_env", "ADGUARD_PASSWORD"), "")
     headers = {"Authorization": "Basic " + base64.b64encode(f"{user}:{password}".encode()).decode()} if user else {}
     return adguard_parser.adguard(_get_json(f"{cfg['url']}/control/stats", headers))
+
+
+PTAX_URL = ("https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo("
+            "dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?@dataInicial='{start}'&@dataFinalCotacao='{end}'"
+            "&$format=json&$select=cotacaoCompra,cotacaoVenda,dataHoraCotacao")
+
+
+def fx(state, now):
+    """USD/BRL from Banco Central's PTAX, fetched once per day; a week-wide window covers weekends and holidays."""
+    cached = state.get("fx")
+    if cached and cached["fetched"] == now.date().isoformat():
+        return cached["rate"]
+    start = (now - dt.timedelta(days=7)).strftime("%m-%d-%Y")
+    rate = costs_parser.ptax(_get_json(PTAX_URL.format(start=start, end=now.strftime("%m-%d-%Y")), timeout=15))
+    if rate:
+        state["fx"] = {"fetched": now.date().isoformat(), "rate": rate}
+    return rate or (cached or {}).get("rate")
 
 
 def statuspages(pages):

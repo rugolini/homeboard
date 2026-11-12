@@ -30,6 +30,8 @@ HELP = {
     "homeboard_agent_tool_calls_today": "Agent tool calls today",
     "homeboard_subscriptions_monthly_brl": "Known monthly subscription costs",
     "homeboard_devices_online": "Catalog devices seen on DHCP",
+    "homeboard_month_total_brl": "Subscriptions plus AI usage this month, in BRL",
+    "homeboard_usd_brl": "USD/BRL exchange rate used (PTAX)",
 }
 
 
@@ -95,6 +97,8 @@ def metrics(status):
         put("homeboard_agent_sessions_today", agent.get("sessions_today"))
         put("homeboard_agent_tool_calls_today", agent.get("tool_calls_today"))
     put("homeboard_subscriptions_monthly_brl", status.get("catalog", {}).get("costs", {}).get("total_brl"))
+    put("homeboard_month_total_brl", (status.get("costs") or {}).get("total_brl"))
+    put("homeboard_usd_brl", ((status.get("costs") or {}).get("fx") or {}).get("usd_brl"))
     for group, devices in (status.get("devices") or {}).items():
         if group != "unknown":
             put("homeboard_devices_online", sum(1 for d in devices if d.get("online")), group=group)

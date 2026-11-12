@@ -189,3 +189,10 @@ footer a{color:var(--mute)}footer a:hover{color:var(--text)}
 .dlist{padding:8px 18px 14px}
 .dlist .r{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;color:var(--mute);border-bottom:1px solid var(--line)}
 .dlist .r:last-child{border:0}.dlist .r b{color:var(--text);font-weight:500}
+.breakdown{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:14px 18px 6px}
+.bpart{border:1px solid var(--line);border-radius:16px;padding:10px 12px 8px;background:var(--glass2)}
+.brow{display:flex;justify-content:space-between;gap:10px;padding:6px 2px;font-size:13px;color:var(--mute);border-bottom:1px solid var(--line)}
+.brow:last-child{border:0}.brow b{color:var(--text);font-weight:500}.brow em{font-style:normal;color:var(--dim);font-size:11px}
+.brow.sub{padding-left:16px;font-size:12px}.brow.sub b{color:var(--mute)}
+.share{font:500 10.5px 'JetBrains Mono',ui-monospace,monospace;color:var(--dim);margin-left:6px}
+@media (max-width:1100px){.breakdown{grid-template-columns:1fr}}

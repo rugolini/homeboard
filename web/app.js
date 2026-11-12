@@ -169,7 +169,7 @@ function serverModal(s) {
   if (!srv) return `<div class="mhead"><img src="${F("Card file box")}" alt=""><div><h3>${t("server")}</h3></div><span class="badge-state down">${t("unavailable")}</span></div>`;
   const disks = srv.disks, healthy = disks.every(d => d.healthy) && srv.array.disabled === 0;
   const running = cont.filter(c => c.State === "running").length;
-  const space = d => d.size_bytes ? `<div class="prog"><i style="width:${(100 * d.used_bytes / d.size_bytes).toFixed(1)}%;background:linear-gradient(90deg,#7fdcff,#a99bff)"></i></div>` : "";
+  const space = d => d.size_bytes ? `<div class="prog"><i style="--w:${(100 * d.used_bytes / d.size_bytes).toFixed(1)}%;background:linear-gradient(90deg,#7fdcff,#a99bff)"></i></div>` : "";
   return `<div class="mhead"><img src="${F("Card file box")}" alt=""><div><h3>${t("server")}</h3><small>${t("storage_sub")}</small></div>
       <span class="badge-state ${healthy ? "up" : "down"}">${t(healthy ? "healthy" : "attention")}</span>${url ? `<a class="btn" href="${url}" target="_blank" rel="noopener">${t("open_console")} ↗</a>` : ""}</div>
     <div class="facts">${fact("CPU", srv.cpu_pct != null ? `${srv.cpu_pct}%` : "—")}${fact(t("temperature") + " CPU", srv.cpu_temp_c != null ? `${srv.cpu_temp_c} °C` : "—")}
@@ -215,7 +215,7 @@ function agentPanel(s) {
        <b class="mono">${d.cost_usd ? brlFromUsd(s, d.cost_usd) : "—"}</b></div>`).join("")}</div></div>
      <div>
        <div class="msec"><h4>${t("cost_eff")}</h4>
-         ${b ? fact(`${t("budget")} (${b.duration || ""})`, `${brlFromUsd(s, b.spend_usd)} / ${brlFromUsd(s, b.max_usd)}`) + `<div class="prog"><i style="width:${pct}%;background:linear-gradient(90deg,#5ee8b0,${pct > 80 ? "#ff8a8a" : "#ffd36b"})"></i></div>` : ""}
+         ${b ? fact(`${t("budget")} (${b.duration || ""})`, `${brlFromUsd(s, b.spend_usd)} / ${brlFromUsd(s, b.max_usd)}`) + `<div class="prog"><i style="--w:${pct}%;background:linear-gradient(90deg,#5ee8b0,${pct > 80 ? "#ff8a8a" : "#ffd36b"})"></i></div>` : ""}
          ${fact(t("cost_today"), brlFromUsd(s, today))}${fact(t("cache_pct"), h.cache_pct != null ? h.cache_pct + "%" : "—")}
          ${Object.entries(a?.tiers || {}).map(([k, v]) => fact(k, `<span class="mono small">${esc(v)}</span>`)).join("")}</div>
        <div class="msec"><h4>${t("access")}</h4>${Object.entries(access).map(([k, v]) => fact(k, `${v} ${t("tasks_short")}`)).join("")}</div>

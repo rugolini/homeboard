@@ -32,6 +32,20 @@ hwmon = "examples/demo/hwmon"
 [sources.backup]
 status_file = "examples/demo/data/backup.json"
 
+# Battery stations read from Home Assistant (token in HA_TOKEN). Runtime = charge above the discharge
+# limit times capacity, divided by the current load.
+# [sources.homeassistant]
+# url = "http://homeassistant.local:8123"
+#
+# [[battery]]
+# name = "Power station"
+# capacity_wh = 1024
+# level = "sensor.station_battery_level"
+# input_w = "sensor.station_input_power"
+# output_w = "sensor.station_output_power"
+# grid_w = "sensor.station_ac_input_power"
+# reserve_pct = "number.station_battery_discharge_limit"
+
 [[probe]]
 host = "example"
 url = "https://example.org/"

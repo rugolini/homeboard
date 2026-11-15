@@ -39,6 +39,8 @@ def collect(cfg, state, history, slow=True):
         fetchers["agent"] = lambda: sources.hermes(src["hermes"], now)
     if "adguard" in src:
         fetchers["dns"] = lambda: sources.adguard(src["adguard"])
+    if "homeassistant" in src and cfg["battery"]:
+        fetchers["power"] = lambda: sources.homeassistant(src["homeassistant"], cfg["battery"])
     if "fx" in src:
         fetchers["fx"] = lambda: sources.fx(state, now)
     mapped = [svc for cat in catalog.load(cfg["raw_text"])["categories"].values() for svc in cat

@@ -15,6 +15,8 @@ STATUS = {
         "ai_spend": {"ok": True, "data": {"month_usd": 22.1, "by_tier": {"tarefas": 0.0, "other": 1.5}}},
         "backup": {"ok": True, "data": {"ok": True, "age_hours": 2.5, "stale": False}},
         "dns": {"ok": False, "error": "boom"},
+        "power": {"ok": True, "data": [{"name": "Delta 2", "level_pct": 80.0, "input_w": 0.0, "output_w": 90.0,
+                                        "on_grid": False, "charging": False, "runtime_min": 491}]},
     },
     "catalog": {"costs": {"total_brl": 698.64}},
     "devices": {"personal": [{"name": "Laptop", "online": True, "down_mbps": 2.5, "up_mbps": 0.5}, {"name": "Phone", "online": False}], "iot": [],
@@ -32,6 +34,12 @@ class MetricsTest(unittest.TestCase):
         self.assertIn('homeboard_probe_up{host="nas"} 0', self.text)
         self.assertIn('homeboard_uplink_up{uplink="5G"} 1', self.text)
         self.assertIn('homeboard_uplink_active{uplink="fibra"} 1', self.text)
+
+    def test_battery_station_gauges(self):
+        self.assertIn('homeboard_battery_level_percent{station="Delta 2"} 80', self.text)
+        self.assertIn('homeboard_battery_power_watts{station="Delta 2",direction="out"} 90', self.text)
+        self.assertIn('homeboard_battery_on_grid{station="Delta 2"} 0', self.text)
+        self.assertIn('homeboard_battery_runtime_seconds{station="Delta 2"} 29460', self.text)
 
     def test_missing_values_are_left_out_not_zeroed(self):
         self.assertNotIn('homeboard_disk_temperature_celsius{disk="parity"}', self.text)

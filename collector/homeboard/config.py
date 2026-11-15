@@ -28,5 +28,6 @@ def parse(text):
         "probe": raw.get("probe", []),
         "map": raw.get("map", {}),
         "statuspage": raw.get("statuspage", []),
+        "battery": raw.get("battery", []),
         "raw_text": text,
     }

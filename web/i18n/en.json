@@ -119,5 +119,14 @@
   "containers": "containers",
   "parity_check": "last parity check",
   "duration": "duration",
-  "status": "status"
+  "status": "status",
+  "power": "Power",
+  "battery": "Battery",
+  "grid": "Grid",
+  "grid_on": "on",
+  "grid_off": "outage",
+  "runtime": "Runtime",
+  "power_in": "Input",
+  "power_out": "Output",
+  "charging": "charging"
 }

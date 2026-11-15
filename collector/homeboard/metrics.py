@@ -35,6 +35,10 @@ HELP = {
     "homeboard_service_traffic_bits_per_second": "Traffic to a catalog service, matched by its IP prefixes",
     "homeboard_month_total_brl": "Subscriptions plus AI usage this month, in BRL",
     "homeboard_usd_brl": "USD/BRL exchange rate used (PTAX)",
+    "homeboard_battery_level_percent": "Battery station charge",
+    "homeboard_battery_power_watts": "Battery station input and output power",
+    "homeboard_battery_on_grid": "1 while the battery station has grid power",
+    "homeboard_battery_runtime_seconds": "Estimated runtime on battery at the current load, above the discharge limit",
 }
 
 
@@ -99,6 +103,12 @@ def metrics(status):
     if agent := data.get("agent"):
         put("homeboard_agent_sessions_today", agent.get("sessions_today"))
         put("homeboard_agent_tool_calls_today", agent.get("tool_calls_today"))
+    for b in data.get("power") or []:
+        put("homeboard_battery_level_percent", b.get("level_pct"), station=b["name"])
+        put("homeboard_battery_power_watts", b.get("input_w"), station=b["name"], direction="in")
+        put("homeboard_battery_power_watts", b.get("output_w"), station=b["name"], direction="out")
+        put("homeboard_battery_on_grid", b.get("on_grid"), station=b["name"])
+        put("homeboard_battery_runtime_seconds", b["runtime_min"] * 60 if b.get("runtime_min") is not None else None, station=b["name"])
     put("homeboard_subscriptions_monthly_brl", status.get("catalog", {}).get("costs", {}).get("total_brl"))
     for svc, rates in (status.get("service_traffic") or {}).items():
         for direction in ("down", "up"):

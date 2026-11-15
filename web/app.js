@@ -128,7 +128,7 @@ function renderMap(s) {
   const vit = srv ? `<span>CPU <b>${srv.cpu_pct ?? "—"}%</b></span><span>${srv.cpu_temp_c ?? "—"} <b>°C</b></span><span>RAM <b>${fmt.bytes(srv.memory.used_bytes)}</b></span>` : `<span>${t("unavailable")}</span>`;
   const bk = block(s, "backup");
   html += `<div class="server"><div class="top"><span class="srv-open" data-server title="${t("details")}"><img src="${F("Card file box")}" alt=""><div><b>${t("server")}</b><small>${(s.apps || []).length} apps · ${t("details")} ›</small></div></span>
-    <div class="vit">${vit}${bk ? `<span>${t("backup")} <b>${bk.ok && !bk.stale ? "ok" : t("attention")}</b></span>` : ""}</div></div>
+    <div class="vit">${vit}${(block(s, "power") || []).map(b => `<span>${t("battery")} <b>${fmt.pct(b.level_pct)}</b></span>`).join("")}${bk ? `<span>${t("backup")} <b>${bk.ok && !bk.stale ? "ok" : t("attention")}</b></span>` : ""}</div></div>
     <div class="apps">${(s.apps || []).map(a => `<a class="app${a.state === "paused" ? " paused" : ""}" data-app="${esc(a.label)}" href="#">
       <i class="status${a.state === "up" ? "" : a.state === "paused" ? " off" : " warn"}"></i><img src="${F(a.icon || "Gear")}" alt=""><b>${esc(a.label)}</b>
       ${tip(a.label, [[t(a.state), a.ms != null ? `${a.ms} ms` : ""], s.history?.[`app:${a.host}`] && [t("uptime30"), fmt.pct(s.history[`app:${a.host}`].uptime_pct)]], { daily: s.history?.[`app:${a.host}`]?.daily })}</a>`).join("")}</div></div>`;
@@ -148,6 +148,8 @@ function renderStrip(s) {
     bk && ["Floppy disk", `${t("backup")} <b>${bk.ok && !bk.stale ? `${bk.age_hours} ${t("hours_ago")}` : t("stale")}</b>`, bk.ok && !bk.stale ? "" : "warn"],
     dns && ["Shield", `DNS <b>${fmt.pct(dns.blocked_pct)}</b>`, ""],
     ai && ["Coin", `${t("ai_usage")} <b>${fmt.usd(ai.month_usd)}</b>`, ""],
+    ...(block(s, "power") || []).map(b => [b.on_grid === false ? "Low battery" : "Battery",
+      `${esc(b.name)} <b>${fmt.pct(b.level_pct)}${b.on_grid === false ? ` · ${t("grid_off")}` : ""}</b>`, b.on_grid === false ? "warn" : ""]),
   ].filter(Boolean);
   $("strip").innerHTML = chips.map(([ic, txt, cls]) => `<div class="chip"><img src="${F(ic)}" alt=""><i class="dot ${cls}"></i>${txt}</div>`).join("");
 }
@@ -180,7 +182,17 @@ function serverModal(s) {
       <span><b>${esc(d.name)}</b> <em class="mono">${d.rotational ? (d.spinning ? t("spinning") : t("stopped")) : "SSD"} · ${d.temp_c != null ? d.temp_c + " °C" : "—"}${d.healthy ? "" : ` · <em class="bad">${t("attention")}</em>`}</em></span>
       <span class="dspace">${space(d)}<b class="mono">${d.size_bytes ? `${fmt.bytes(d.used_bytes)} / ${fmt.bytes(d.size_bytes)}` : "—"}</b></span></div>`).join("")}</div></div>
     ${bk ? `<div class="msec"><h4>${t("backup")}</h4><div class="facts">${fact(t("last_copy"), `${bk.age_hours} ${t("hours_ago")}`)}${fact(t("duration"), bk.seconds ? `${Math.round(bk.seconds / 60)} ${t("minutes")}` : "—")}
-      ${fact(t("status"), bk.ok && !bk.stale ? "ok" : `<span style="color:var(--warn)">${t(bk.stale ? "stale" : "attention")}</span>`)}${fact("erro", bk.error ? esc(bk.error) : null)}</div></div>` : ""}`;
+      ${fact(t("status"), bk.ok && !bk.stale ? "ok" : `<span style="color:var(--warn)">${t(bk.stale ? "stale" : "attention")}</span>`)}${fact("erro", bk.error ? esc(bk.error) : null)}</div></div>` : ""}
+    ${powerSection(s)}`;
+}
+
+const watts = v => v == null ? "—" : `${Math.round(v)} W`;
+function powerSection(s) {
+  const st = block(s, "power");
+  if (!st?.length) return "";
+  return `<div class="msec"><h4>${t("power")}</h4>${st.map(b => `<div class="facts">${fact(esc(b.name), `${fmt.pct(b.level_pct)}${b.charging ? ` · ${t("charging")}` : ""}`)}
+    ${fact(t("grid"), b.on_grid == null ? "—" : b.on_grid ? t("grid_on") : `<span style="color:var(--warn)">${t("grid_off")}</span>`)}
+    ${fact(t("power_in"), watts(b.input_w))}${fact(t("power_out"), watts(b.output_w))}${fact(t("runtime"), b.runtime_min != null ? ago(b.runtime_min) : "—")}</div>`).join("")}</div>`;
 }
 
 const SOURCE_ICON = { whatsapp: "Speech balloon", cron: "Hourglass not done", cli: "Desktop computer", tui: "Desktop computer", api_server: "Link", subagent: "Robot" };

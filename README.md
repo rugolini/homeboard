@@ -42,6 +42,7 @@ source that fails shows as *unavailable* without affecting the others.
 | LiteLLM | month-to-date spend per tier and per key (read-only Postgres user) | `[sources.litellm]` |
 | Hermes agent | a copy of `state.db` (never the live file) | `[sources.hermes]` |
 | AdGuard Home | queries and block rate | `[sources.adguard]` |
+| Home Assistant | battery stations (portable power station, UPS): charge, input/output power, grid, runtime, from entity states (long-lived token of a non-admin user) | `[sources.homeassistant]` + `[[battery]]` |
 | Exchange rate | USD/BRL from Banco Central's PTAX, once a day, to show AI spend in reais | `[sources.fx]` |
 | Status pages | Atlassian Statuspage `/api/v2/status.json` (Claude, Cloudflare, GitHub…); link a service with `status = "page:<name>"` | `[[statuspage]]` |
 | HTTP probes | any URL; a login redirect or 401 still counts as up (`insecure = true` for a self-signed LAN certificate) | `[[probe]]` |
@@ -54,7 +55,7 @@ optional live `status` such as `uplink:fiber` or `app:<host>`, and `asn`/`ip_ran
 
 - **homeboard has no login of its own.** Put it behind an authenticating proxy (Cloudflare Access, Authelia, a VPN).
 - Secrets never go in the config file; the loader refuses keys like `password` or `token`. Pass them as environment
-  variables (`LITELLM_DSN`, `ADGUARD_USER`, `ADGUARD_PASSWORD`).
+  variables (`LITELLM_DSN`, `ADGUARD_USER`, `ADGUARD_PASSWORD`, `HA_TOKEN`).
 - Host paths are mounted read-only, the container runs as an unprivileged user with a read-only root filesystem.
 - The router key should be a dedicated key restricted to the status script with `command=` in `authorized_keys`.
 - Agent steps are truncated and pass through a redaction filter for API keys and tokens before reaching the page.

@@ -119,5 +119,14 @@
   "containers": "containers",
   "parity_check": "última checagem",
   "duration": "duração",
-  "status": "situação"
+  "status": "situação",
+  "power": "Energia",
+  "battery": "Bateria",
+  "grid": "Rede elétrica",
+  "grid_on": "ligada",
+  "grid_off": "sem energia",
+  "runtime": "Autonomia",
+  "power_in": "Entrada",
+  "power_out": "Saída",
+  "charging": "carregando"
 }

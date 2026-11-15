@@ -14,6 +14,7 @@ import urllib.error
 import urllib.request
 
 from . import adguard as adguard_parser
+from . import power as power_parser
 from . import agent as agent_parser
 from . import statuspage as statuspage_parser
 from . import costs as costs_parser
@@ -140,6 +141,12 @@ def adguard(cfg):
     password = os.environ.get(cfg.get("password_env", "ADGUARD_PASSWORD"), "")
     headers = {"Authorization": "Basic " + base64.b64encode(f"{user}:{password}".encode()).decode()} if user else {}
     return adguard_parser.adguard(_get_json(f"{cfg['url']}/control/stats", headers))
+
+
+def homeassistant(cfg, configured):
+    token = os.environ[cfg.get("token_env", "HA_TOKEN")]
+    states = _get_json(f"{cfg['url'].rstrip('/')}/api/states", {"Authorization": f"Bearer {token}"})
+    return power_parser.stations(states, configured)
 
 
 PTAX_URL = ("https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/CotacaoDolarPeriodo("

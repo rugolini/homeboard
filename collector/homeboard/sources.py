@@ -1,16 +1,16 @@
 """Edges: each function reaches one real system and hands raw data to a tested parser."""
 import base64
 import datetime as dt
+import fcntl
 import json
 import os
 import pathlib
-import shutil
 import ssl
 import sqlite3
 import subprocess
-import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from . import adguard as adguard_parser
@@ -119,13 +119,12 @@ def litellm(cfg, now):
 
 
 def hermes(cfg, now):
+    """Reads the copy of state.db where it lies. The job that refreshes the copy holds `<state_db>.lock` exclusively
+    while it writes, so a shared lock here is enough to never read a half-written file."""
     src = pathlib.Path(cfg["state_db"])
-    with tempfile.TemporaryDirectory() as tmp:
-        # Copy db + WAL so a read never touches the live file the agent is writing.
-        for suffix in ("", "-wal", "-shm"):
-            if (src.parent / (src.name + suffix)).exists():
-                shutil.copy2(src.parent / (src.name + suffix), pathlib.Path(tmp) / (src.name + suffix))
-        conn = sqlite3.connect(pathlib.Path(tmp) / src.name)
+    with open(f"{src}.lock", "a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_SH)
+        conn = sqlite3.connect(f"file:{urllib.parse.quote(str(src))}?mode=ro", uri=True)
         try:
             data = hermes_parser.summary(conn, now)
             data["activity"] = agent_parser.activity(conn, now)

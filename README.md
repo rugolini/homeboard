@@ -40,7 +40,7 @@ source that fails shows as *unavailable* without affecting the others.
 | Backup | a JSON status file your backup job writes (`time`, `ok`, `seconds`, `error`) | `[sources.backup]` |
 | GL.iNet router | uplinks, failover, rates, 5G signal, WireGuard, DHCP, Wi-Fi via [`adapters/gl-inet`](adapters/gl-inet/homeboard-status.sh) | `[sources.glinet]` |
 | LiteLLM | month-to-date spend per tier and per key (read-only Postgres user) | `[sources.litellm]` |
-| Hermes agent | a copy of `state.db` (never the live file) | `[sources.hermes]` |
+| Hermes agent | a copy of `state.db` (never the live file), read in place; the job that refreshes it holds `state.db.lock` while writing | `[sources.hermes]` |
 | AdGuard Home | queries and block rate | `[sources.adguard]` |
 | Home Assistant | battery stations (portable power station, UPS): charge, input/output power, grid, runtime, from entity states (long-lived token of a non-admin user) | `[sources.homeassistant]` + `[[battery]]` |
 | Exchange rate | USD/BRL from Banco Central's PTAX, once a day, to show AI spend in reais | `[sources.fx]` |
